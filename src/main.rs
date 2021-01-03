@@ -21,9 +21,12 @@ fn check_variation(variation: String) -> bool {
     let mut ply = 0;
     for ch in variation.trim().chars() {
         let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
-        let temp = current | bitboard::drop(current, other, column);
+        let new_board = current | bitboard::drop(current, other, column);
+        if (!bitboard::is_legal(new_board)) {
+            panic!("Invalid move");
+        }
         current = other;
-        other = temp;
+        other = new_board;
         ply += 1;
     }
 
