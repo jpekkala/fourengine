@@ -1,7 +1,9 @@
 use std::io;
 use crate::bitboard::Bitboard;
+use crate::game_state::GameState;
 
 mod bitboard;
+mod game_state;
 
 fn main() {
     let mut variation = String::new();
@@ -14,23 +16,15 @@ fn main() {
 }
 
 fn check_variation(variation: String) -> bool {
-    let won = bitboard::has_won(0);
-    let mut current: Bitboard = 0;
-    let mut other: Bitboard = 0;
+    let mut game_state = GameState::new();
 
-    let mut ply = 0;
     for ch in variation.trim().chars() {
         let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
-        let new_board = current | bitboard::drop(current, other, column);
-        if (!bitboard::is_legal(new_board)) {
-            panic!("Invalid move");
-        }
-        current = other;
-        other = new_board;
-        ply += 1;
+        game_state.drop(column);
     }
 
-    println!("Current board is {:#066b}", current);
-    println!("Other board is   {:#066b}", other);
-    bitboard::has_won(current) || bitboard::has_won(other)
+    println!("Current board is {:#066b}", game_state.current);
+    println!("Other board is   {:#066b}", game_state.other);
+
+    return game_state.has_won();
 }
