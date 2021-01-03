@@ -1,11 +1,11 @@
 pub type Bitboard = u64;
 
 // board dimensions
-const WIDTH: u32 = 7;
-const HEIGHT: u32 = 6;
+pub const WIDTH: u32 = 7;
+pub const HEIGHT: u32 = 6;
 
 // the column height including the buffer cell
-const BIT_HEIGHT: u32 = HEIGHT + 1;
+pub const BIT_HEIGHT: u32 = HEIGHT + 1;
 
 const ALL_BITS: Bitboard = (1 << (BIT_HEIGHT * WIDTH)) - 1;
 const FIRST_COLUMN: Bitboard = (1 << BIT_HEIGHT) - 1;
@@ -46,4 +46,8 @@ pub fn drop(current: Bitboard, other: Bitboard, column: u32) -> Bitboard {
 
 pub fn is_legal(board: Bitboard) -> bool {
     (TOP_ROW & board) == 0
+}
+
+pub fn get_position_code(p1: Bitboard, p2: Bitboard) -> Bitboard {
+    BOTTOM_ROW + p1 + p1 + p2
 }

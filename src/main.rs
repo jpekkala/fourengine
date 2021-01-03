@@ -1,9 +1,9 @@
 use std::io;
-use crate::bitboard::Bitboard;
 use crate::game_state::GameState;
 
 mod bitboard;
 mod game_state;
+mod trans_table;
 
 fn main() {
     let mut variation = String::new();
@@ -23,8 +23,7 @@ fn check_variation(variation: String) -> bool {
         game_state.drop(column);
     }
 
-    println!("Current board is {:#066b}", game_state.current);
-    println!("Other board is   {:#066b}", game_state.other);
+    println!("The board is\n{}", game_state);
 
     return game_state.has_won();
 }

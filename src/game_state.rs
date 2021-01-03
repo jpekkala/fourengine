@@ -11,7 +11,7 @@ pub struct GameState {
     pub other: Bitboard,
 }
 
-enum Player {
+enum Disc {
     WHITE,
     RED,
     EMPTY,
@@ -39,10 +39,36 @@ impl GameState {
     pub fn has_won(&self) -> bool {
         bitboard::has_won(self.current) || bitboard::has_won(self.other)
     }
+
+    pub fn get_disc_at(&self, x: u32, y: u32) -> Disc {
+        let cell: Bitboard = 1 << (bitboard::WIDTH * x + y);
+
+        let white_moves = self.ply % 2 == 0;
+        let white_board = if white_moves { self.current } else { self.other };
+        let red_board = if white_moves { self.other } else { self.current };
+
+        if white_board & cell != 0 {
+            Disc::WHITE
+        } else if red_board & cell != 0 {
+            Disc::RED
+        } else {
+            Disc::EMPTY
+        }
+    }
 }
 
 impl fmt::Display for GameState {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        for y in (0..bitboard::HEIGHT).rev() {
+            for x in 0..bitboard::WIDTH {
+                match self.get_disc_at(x, y) {
+                    Disc::WHITE => write!(f, "X")?,
+                    Disc::RED => write!(f, "O")?,
+                    Disc::EMPTY => write!(f, ".")?,
+                }
+            }
+            writeln!(f);
+        }
+        Ok(())
     }
 }
