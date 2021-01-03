@@ -1,5 +1,9 @@
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
+
 use crate::bitboard;
 use crate::bitboard::Bitboard;
+use std::ascii::escape_default;
 
 type Entry = u64;
 
@@ -20,7 +24,17 @@ struct TransTable {
 // The number of bits needed to encode a position
 const POSITION_BITS: u32 = bitboard::BIT_HEIGHT * bitboard::WIDTH;
 // The number of bits needed to encode a score
-const SCORE_BITS: u32 = 2;
+const SCORE_BITS: u32 = 3;
+
+#[derive(FromPrimitive)]
+enum Score {
+    Loss = 1,
+    DrawOrLoss,
+    Draw,
+    DrawOrWin,
+    Win,
+    Unknown = 0,
+}
 
 impl TransTable {
 
@@ -45,7 +59,7 @@ impl TransTable {
         }
     }
 
-    pub fn store(&mut self, position: Bitboard, score: u32, work: u32) {
+    pub fn store(&mut self, position: Bitboard, score: Score, work: u32) {
         let index: usize = ((position % self.table_size as u64) * 2) as usize;
         let key: Entry = position >> self.key_bits;
 
@@ -62,21 +76,25 @@ impl TransTable {
         }
     }
 
-    pub fn fetch(&self, position: Bitboard) -> u32 {
+    pub fn fetch(&self, position: Bitboard) -> Score {
         let index: usize = ((position % self.table_size as u64) * 2) as usize;
         let key: Entry = position >> self.key_bits;
 
+        let mut found_entry = None;
         let expensive_entry = self.entries[index];
         if (expensive_entry & self.key_mask) == key {
-            return ((expensive_entry & self.score_mask) >> self.key_bits) as u32;
+            found_entry = Some(expensive_entry);
         }
 
         let recent_entry = self.entries[index + 1];
         if (recent_entry & self.key_mask) == key {
-            return ((recent_entry & self.score_mask) >> self.key_bits) as u32
+            found_entry = Some(recent_entry);
         }
 
-        0
+        match found_entry {
+            Some(entry) => FromPrimitive::from_u64((entry & self.score_mask) >> self.key_bits).expect("Invalid score"),
+            None => Score::Unknown
+        }
     }
 }
 

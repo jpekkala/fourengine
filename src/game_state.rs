@@ -12,9 +12,9 @@ pub struct GameState {
 }
 
 enum Disc {
-    WHITE,
-    RED,
-    EMPTY,
+    White,
+    Red,
+    Empty,
 }
 
 impl GameState {
@@ -48,11 +48,11 @@ impl GameState {
         let red_board = if white_moves { self.other } else { self.current };
 
         if white_board & cell != 0 {
-            Disc::WHITE
+            Disc::White
         } else if red_board & cell != 0 {
-            Disc::RED
+            Disc::Red
         } else {
-            Disc::EMPTY
+            Disc::Empty
         }
     }
 }
@@ -62,9 +62,9 @@ impl fmt::Display for GameState {
         for y in (0..bitboard::HEIGHT).rev() {
             for x in 0..bitboard::WIDTH {
                 match self.get_disc_at(x, y) {
-                    Disc::WHITE => write!(f, "X")?,
-                    Disc::RED => write!(f, "O")?,
-                    Disc::EMPTY => write!(f, ".")?,
+                    Disc::White => write!(f, "X")?,
+                    Disc::Red => write!(f, "O")?,
+                    Disc::Empty => write!(f, ".")?,
                 }
             }
             writeln!(f);
