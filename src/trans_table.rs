@@ -37,7 +37,6 @@ enum Score {
 }
 
 impl TransTable {
-
     pub fn new(table_size: usize) -> TransTable {
         let entries: Vec<Entry> = vec![0; table_size * 2];
         let key_bits = POSITION_BITS - calc_bits_required(table_size);
@@ -63,7 +62,8 @@ impl TransTable {
         let index: usize = ((position % self.table_size as u64) * 2) as usize;
         let key: Entry = position >> self.key_bits;
 
-        let new_entry: Entry = key | ((score as Entry) << self.key_bits) | ((work as Entry) << self.key_score_bits);
+        let new_entry: Entry =
+            key | ((score as Entry) << self.key_bits) | ((work as Entry) << self.key_score_bits);
         let expensive_entry = self.entries[index];
 
         if (expensive_entry & self.key_mask) == key {
@@ -92,8 +92,9 @@ impl TransTable {
         }
 
         match found_entry {
-            Some(entry) => FromPrimitive::from_u64((entry & self.score_mask) >> self.key_bits).expect("Invalid score"),
-            None => Score::Unknown
+            Some(entry) => FromPrimitive::from_u64((entry & self.score_mask) >> self.key_bits)
+                .expect("Invalid score"),
+            None => Score::Unknown,
         }
     }
 }

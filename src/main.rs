@@ -1,5 +1,5 @@
-use std::io;
 use crate::game_state::GameState;
+use std::io;
 
 mod bitboard;
 mod game_state;

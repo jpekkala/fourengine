@@ -44,8 +44,16 @@ impl GameState {
         let cell: Bitboard = 1 << (bitboard::WIDTH * x + y);
 
         let white_moves = self.ply % 2 == 0;
-        let white_board = if white_moves { self.current } else { self.other };
-        let red_board = if white_moves { self.other } else { self.current };
+        let white_board = if white_moves {
+            self.current
+        } else {
+            self.other
+        };
+        let red_board = if white_moves {
+            self.other
+        } else {
+            self.current
+        };
 
         if white_board & cell != 0 {
             Disc::White
