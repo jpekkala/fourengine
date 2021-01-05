@@ -27,3 +27,19 @@ impl Score {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compare() {
+        assert!(Score::Win > Score::Loss);
+    }
+
+    #[test]
+    fn flip() {
+        assert_eq!(Score::Win.flip(), Score::Loss);
+        assert_eq!(Score::Unknown.flip(), Score::Unknown);
+    }
+}

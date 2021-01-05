@@ -1,4 +1,5 @@
-use crate::bitboard::{BOARD_HEIGHT, BOARD_WIDTH};
+use crate::bitboard::{Bitboard, BOARD_HEIGHT, BOARD_WIDTH};
+use crate::history_heuristic::HistoryHeuristic;
 use crate::position::Position;
 use crate::score::Score;
 use crate::trans_table::TransTable;
@@ -6,7 +7,43 @@ use crate::trans_table::TransTable;
 pub struct Engine {
     pub position: Position,
     trans_table: TransTable,
-    interior_count: usize,
+    history: HistoryHeuristic,
+    pub work_count: usize,
+}
+
+#[derive(Clone)]
+struct Move {
+    /// The column where the disc is dropped
+    x: u32,
+    y: u32,
+    old_board: Bitboard,
+    new_board: Bitboard,
+    enemy_board: Bitboard,
+}
+
+impl Move {
+    pub fn new(position: &Position, column: u32) -> Move {
+        Move {
+            x: column,
+            y: position.get_height(column),
+            old_board: position.current,
+            new_board: position.current.drop(position.other, column),
+            enemy_board: position.other,
+        }
+    }
+
+    pub fn is_legal(&self) -> bool {
+        self.new_board.is_legal()
+    }
+
+    pub fn has_won(&self) -> bool {
+        self.new_board.has_won()
+    }
+
+    pub fn is_forced_move(&self) -> bool {
+        // must be legal for the opponent if it was legal for the current player
+        self.enemy_board.drop(self.old_board, self.x).has_won()
+    }
 }
 
 impl Engine {
@@ -14,12 +51,21 @@ impl Engine {
         Engine {
             position,
             trans_table: TransTable::new(67108859),
-            interior_count: 0,
+            work_count: 0,
+            history: HistoryHeuristic::new(),
         }
     }
 
-    pub fn negamax(&mut self, alpha: Score, beta: Score, max_depth: u32) -> Score {
-        self.interior_count += 1;
+    pub fn solve(&mut self) -> Score {
+        self.negamax(Score::Loss, Score::Win, 42)
+    }
+
+    fn negamax(&mut self, alpha: Score, beta: Score, max_depth: u32) -> Score {
+        if self.position.has_won() {
+            panic!("Already won");
+        }
+
+        self.work_count += 1;
 
         if self.position.ply == BOARD_WIDTH * BOARD_HEIGHT {
             return Score::Draw;
@@ -29,8 +75,8 @@ impl Engine {
             return Score::Unknown;
         }
 
-        if self.interior_count % 1_000_000 == 0 {
-            println!("{}", self.position);
+        if self.work_count % 1_000_000 == 0 {
+            //println!("{}", self.position);
         }
 
         let mut best_score = Score::Loss;
@@ -55,37 +101,40 @@ impl Engine {
             }
         }
 
-        let mut children = expand_children(&self.position);
-        for child in &children {
-            if child.other.has_won() {
+        let mut possible_moves = get_possible_moves(&self.position);
+        for m in &possible_moves {
+            if m.has_won() {
                 return Score::Win;
             }
         }
 
-        let mut enemy_threat_at = None;
-        for column in 0..BOARD_WIDTH {
-            let enemy_board = self.position.other.drop(self.position.current, column);
-            if enemy_board.is_legal() && enemy_board.has_won() {
-                if enemy_threat_at.is_some() {
+        let mut forced_move = None;
+        for m in &possible_moves {
+            if m.is_forced_move() {
+                if forced_move.is_some() {
+                    // double threat
                     return Score::Loss;
                 }
-                enemy_threat_at = Some(column);
+                forced_move = Some(m);
             }
         }
-        if let Some(column) = enemy_threat_at {
-            // drop must be valid if it was valid for the opponent
-            let child = self.position.drop(column).unwrap();
-            children = vec![child];
+        if let Some(drop) = forced_move {
+            possible_moves = vec![drop.clone()];
         }
 
         // TODO: Order moves
+        possible_moves.sort_by(|a, b| {
+            self.history
+                .get_score(a.x, a.y)
+                .cmp(&self.history.get_score(b.x, b.y))
+        });
 
         // alpha-beta
         let old_position = self.position;
-        let original_interior_count = self.interior_count;
+        let original_interior_count = self.work_count;
         let mut unknown_count = 0;
-        for child in children {
-            self.position = child;
+        for m in possible_moves {
+            self.position = old_position.drop(m.x).unwrap();
 
             let score = self
                 .negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
@@ -107,6 +156,7 @@ impl Engine {
             }
 
             if new_alpha >= new_beta {
+                //self.history.increase_score(m.x, m.y, 1 << 3);
                 // TODO: update history score
                 break;
             }
@@ -116,7 +166,7 @@ impl Engine {
             }
         }
         self.position = old_position;
-        let work = self.interior_count - original_interior_count;
+        let work = self.work_count - original_interior_count;
 
         if unknown_count > 0 {
             if best_score == Score::Draw {
@@ -132,12 +182,12 @@ impl Engine {
     }
 }
 
-fn expand_children(position: &Position) -> Vec<Position> {
+fn get_possible_moves(position: &Position) -> Vec<Move> {
     let mut possible_moves = Vec::new();
     for column in 0..BOARD_WIDTH {
-        match position.drop(column) {
-            Some(child) => possible_moves.push(child),
-            None => {}
+        let m = Move::new(position, column);
+        if m.is_legal() {
+            possible_moves.push(m)
         }
     }
     possible_moves

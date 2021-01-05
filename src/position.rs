@@ -1,8 +1,6 @@
 use std::fmt;
 
-use crate::bitboard;
 use crate::bitboard::{Bitboard, PositionCode, BOARD_HEIGHT, BOARD_WIDTH};
-use crate::score::*;
 use std::fmt::Formatter;
 
 /// Represents the board state of a particular position but not how the position was arrived at.
