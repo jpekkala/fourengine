@@ -7,6 +7,7 @@ use std::fmt::Formatter;
 
 /// Represents the board state of a particular position but not how the position was arrived at.
 /// Contains the same information as PositionCode but in a format that is easier to manipulate.
+#[derive(Copy, Clone)]
 pub struct Position {
     pub ply: u32,
 
@@ -33,21 +34,21 @@ impl Position {
         let mut position = Position::empty();
         for ch in variation.trim().chars() {
             let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
-            position = position.drop(column);
+            position = position.drop(column).expect("Invalid move");
         }
         position
     }
 
-    pub fn drop(&self, column: u32) -> Position {
+    pub fn drop(&self, column: u32) -> Option<Position> {
         let new_board = self.current.drop(self.other, column);
         if !new_board.is_legal() {
-            panic!("Invalid move");
+            return None;
         }
-        Position {
+        Some(Position {
             current: self.other,
             other: new_board,
             ply: self.ply + 1,
-        }
+        })
     }
 
     pub fn has_won(&self) -> bool {
@@ -129,6 +130,13 @@ mod tests {
              ..X.XO.\n\
              ..OXOXX\n";
         assert_eq!(position.to_string(), expected);
+    }
+
+    #[test]
+    fn invalid_move() {
+        let position = Position::from_variation("444444");
+        assert!(position.drop(3).is_none());
+        assert!(position.drop(0).is_some());
     }
 
     #[test]
