@@ -29,6 +29,7 @@ pub struct TransTable {
 
     key_mask: Entry,
     score_mask: Entry,
+    #[allow(dead_code)]
     work_mask: Entry,
 }
 

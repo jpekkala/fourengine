@@ -13,10 +13,10 @@ pub const POSITION_BITS: u32 = (BOARD_HEIGHT + 1) * BOARD_WIDTH;
 /// bigger board sizes are used.
 pub type BoardInteger = u64;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Bitboard(BoardInteger);
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, PartialOrd)]
 pub struct PositionCode(BoardInteger);
 
 // the column height including the buffer cell
@@ -80,6 +80,16 @@ impl Bitboard {
     pub fn has_disc(&self, x: u32, y: u32) -> bool {
         let bit = 1 << (BOARD_WIDTH * x + y);
         (self.0 & bit) != 0
+    }
+
+    pub fn flip(&self) -> Bitboard {
+        let mut pos = self.0;
+        let mut mirror: BoardInteger = 0;
+        for _ in 0..BOARD_WIDTH {
+            mirror = (mirror << BIT_HEIGHT) | (pos & FIRST_COLUMN);
+            pos >>= BIT_HEIGHT;
+        }
+        Bitboard(mirror)
     }
 }
 

@@ -79,6 +79,9 @@ impl Engine {
             //println!("{}", self.position);
         }
 
+        let (normalized_position, symmetric) = self.position.normalize();
+        self.position = normalized_position;
+
         let mut best_score = Score::Loss;
         let mut new_alpha = alpha;
         let mut new_beta = beta;
@@ -120,6 +123,8 @@ impl Engine {
         }
         if let Some(drop) = forced_move {
             possible_moves = vec![drop.clone()];
+        } else if symmetric {
+            possible_moves.retain(|m| m.x <= BOARD_WIDTH / 2);
         }
 
         possible_moves.sort_by(|a, b| {

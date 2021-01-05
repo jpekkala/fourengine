@@ -5,7 +5,7 @@ use std::fmt::Formatter;
 
 /// Represents the board state of a particular position but not how the position was arrived at.
 /// Contains the same information as PositionCode but in a format that is easier to manipulate.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Position {
     pub ply: u32,
 
@@ -82,12 +82,36 @@ impl Position {
     }
 
     pub fn to_position_code(&self) -> PositionCode {
-        let (white_board, red_board) = self.get_ordered_boards();
-        PositionCode::new(white_board, red_board)
+        PositionCode::new(self.current, self.other)
     }
 
     pub fn get_height(&self, column: u32) -> u32 {
         self.current.get_height(self.other, column)
+    }
+
+    pub fn normalize(&self) -> (Position, bool) {
+        let flipped_current = self.current.flip();
+        let flipped_other = self.other.flip();
+        let code1 = PositionCode::new(self.current, self.other);
+        let code2 = PositionCode::new(flipped_current, flipped_other);
+        let symmetric = code1 == code2;
+        if code1 < code2 {
+            (Position {
+                ply: self.ply,
+                current: flipped_current,
+                other: flipped_other,
+            }, symmetric)
+        } else {
+            (*self, symmetric)
+        }
+    }
+
+    pub fn flip(&self) -> Position {
+        Position {
+            ply: self.ply,
+            current: self.current.flip(),
+            other: self.other.flip(),
+        }
     }
 }
 
@@ -144,6 +168,28 @@ mod tests {
         assert_eq!(position.get_height(4), 3);
         assert_eq!(position.get_height(5), 2);
         assert_eq!(position.get_height(6), 1);
+    }
+
+    #[test]
+    fn flip() {
+        let position = Position::from_variation("436675553");
+        let expected = "\
+             .......\n\
+             .......\n\
+             .......\n\
+             ....O..\n\
+             ..X.XO.\n\
+             ..OXOXX\n";
+        assert_eq!(position.to_string(), expected);
+
+        let flipped = position.flip();
+        let expected = "\
+             .......\n\
+             .......\n\
+             .......\n\
+             ..O....\n\
+             .OX.X..\n\
+             XXOXO..\n";
     }
 
     #[test]
