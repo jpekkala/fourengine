@@ -2,6 +2,7 @@ use crate::game_state::GameState;
 use std::io;
 
 mod bitboard;
+mod constants;
 mod game_state;
 mod trans_table;
 
@@ -20,7 +21,7 @@ fn check_variation(variation: String) -> bool {
 
     for ch in variation.trim().chars() {
         let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
-        game_state.drop(column);
+        game_state = game_state.drop(column);
     }
 
     println!("The board is\n{}", game_state);

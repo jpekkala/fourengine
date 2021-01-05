@@ -1,8 +1,8 @@
-use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::bitboard;
 use crate::bitboard::Position;
+use crate::constants::*;
 
 type Entry = bitboard::BoardInteger;
 
@@ -32,20 +32,8 @@ struct TransTable {
     work_mask: Entry,
 }
 
-/// The number of bits needed to encode a position
-const POSITION_BITS: u32 = bitboard::BIT_HEIGHT * bitboard::WIDTH;
 /// The number of bits needed to encode a score
 const SCORE_BITS: u32 = 3;
-
-#[derive(FromPrimitive, PartialEq, Debug)]
-enum Score {
-    Loss = 1,
-    DrawOrLoss,
-    Draw,
-    DrawOrWin,
-    Win,
-    Unknown = 0,
-}
 
 impl TransTable {
     pub fn new(table_size: usize) -> TransTable {
@@ -117,7 +105,7 @@ impl TransTable {
         }
 
         match found_entry {
-            Some(entry) => FromPrimitive::from_u64((entry & self.score_mask) >> self.key_bits)
+            Some(entry) => Score::from_u64((entry & self.score_mask) >> self.key_bits)
                 .expect("Invalid score"),
             None => Score::Unknown,
         }

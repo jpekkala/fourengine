@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+use crate::constants::BOARD_HEIGHT;
+use crate::constants::BOARD_WIDTH;
+
 /// The underlying unsigned integer used to represent the board. This type should have at least
 /// board_width * (board_height + 1) bits. Generally you should use the other types which have a
 /// semantic meaning. This type exists just so that it is easier to change the underlying type if
@@ -12,17 +15,13 @@ pub struct Bitboard(BoardInteger);
 #[derive(Copy, Clone)]
 pub struct Position(BoardInteger);
 
-// board dimensions
-pub const WIDTH: u32 = 7;
-pub const HEIGHT: u32 = 6;
-
 // the column height including the buffer cell
-pub const BIT_HEIGHT: u32 = HEIGHT + 1;
+pub const BIT_HEIGHT: u32 = BOARD_HEIGHT + 1;
 
-const ALL_BITS: BoardInteger = (1 << (BIT_HEIGHT * WIDTH)) - 1;
+const ALL_BITS: BoardInteger = (1 << (BIT_HEIGHT * BOARD_WIDTH)) - 1;
 const FIRST_COLUMN: BoardInteger = (1 << BIT_HEIGHT) - 1;
 const BOTTOM_ROW: BoardInteger = ALL_BITS / FIRST_COLUMN;
-const TOP_ROW: BoardInteger = BOTTOM_ROW << HEIGHT;
+const TOP_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
 const FULL_BOARD: BoardInteger = ALL_BITS ^ TOP_ROW;
 
 impl Bitboard {
@@ -70,7 +69,7 @@ impl Bitboard {
     }
 
     pub fn has_disc(&self, x: u32, y: u32) -> bool {
-        let bit = 1 << (WIDTH * x + y);
+        let bit = 1 << (BOARD_WIDTH * x + y);
         (self.0 & bit) != 0
     }
 }

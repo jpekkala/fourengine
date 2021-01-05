@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::bitboard;
 use crate::bitboard::Bitboard;
+use crate::constants::*;
 use std::fmt::Formatter;
 
 pub struct GameState {
@@ -26,14 +27,16 @@ impl GameState {
         }
     }
 
-    pub fn drop(&mut self, column: u32) {
+    pub fn drop(&self, column: u32) -> GameState {
         let new_board = self.current.drop(self.other, column);
         if !new_board.is_legal() {
             panic!("Invalid move");
         }
-        self.current = self.other;
-        self.other = new_board;
-        self.ply += 1;
+        GameState {
+            current: self.other,
+            other: new_board,
+            ply: self.ply + 1
+        }
     }
 
     pub fn has_won(&self) -> bool {
@@ -65,8 +68,8 @@ impl GameState {
 
 impl fmt::Display for GameState {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for y in (0..bitboard::HEIGHT).rev() {
-            for x in 0..bitboard::WIDTH {
+        for y in (0..BOARD_HEIGHT).rev() {
+            for x in 0..BOARD_WIDTH {
                 match self.get_disc_at(x, y) {
                     Disc::White => write!(f, "X")?,
                     Disc::Red => write!(f, "O")?,
