@@ -1,5 +1,5 @@
 use crate::bitboard::{Bitboard, BOARD_HEIGHT, BOARD_WIDTH};
-use crate::history_heuristic::HistoryHeuristic;
+use crate::heuristic::{FixedHeuristic, Heuristic, HistoryHeuristic};
 use crate::position::Position;
 use crate::score::Score;
 use crate::trans_table::TransTable;
@@ -7,8 +7,8 @@ use crate::trans_table::TransTable;
 pub struct Engine {
     pub position: Position,
     trans_table: TransTable,
-    pub history: HistoryHeuristic,
     pub work_count: usize,
+    pub heuristic: FixedHeuristic,
 }
 
 #[derive(Clone)]
@@ -52,7 +52,7 @@ impl Engine {
             position,
             trans_table: TransTable::new(67108859),
             work_count: 0,
-            history: HistoryHeuristic::new(),
+            heuristic: FixedHeuristic {},
         }
     }
 
@@ -122,11 +122,10 @@ impl Engine {
             possible_moves = vec![drop.clone()];
         }
 
-        // TODO: Order moves
         possible_moves.sort_by(|a, b| {
-            self.history
-                .get_score(b.x, b.y)
-                .cmp(&self.history.get_score(a.x, a.y))
+            self.heuristic
+                .get_value(b.x, b.y)
+                .cmp(&self.heuristic.get_value(a.x, a.y))
         });
 
         // alpha-beta
@@ -156,9 +155,10 @@ impl Engine {
             }
 
             if new_alpha >= new_beta {
-                self.history.increase_score(m.x, m.y, 1);
+                self.heuristic.increase_value(m.x, m.y, index as i32);
                 for i in 0..index {
-                    self.history.increase_score(possible_moves[i].x, possible_moves[i].y, -1);
+                    self.heuristic
+                        .increase_value(possible_moves[i].x, possible_moves[i].y, -1);
                 }
                 break;
             }

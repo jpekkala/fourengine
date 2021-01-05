@@ -5,7 +5,7 @@ use std::time::Instant;
 
 mod bitboard;
 mod engine;
-mod history_heuristic;
+mod heuristic;
 mod position;
 mod score;
 mod trans_table;
@@ -24,7 +24,7 @@ fn main() {
     let start = Instant::now();
     let result = engine.solve();
     let duration = start.elapsed();
-    println!("History is\n{}", engine.history);
+    //println!("History is\n{}", engine.history);
     println!("The result is {:?}", result);
     println!("Work count is {}", engine.work_count);
     println!("Elapsed time is {:?}", duration);
