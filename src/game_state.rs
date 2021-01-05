@@ -11,7 +11,7 @@ pub struct GameState {
     pub other: Bitboard,
 }
 
-enum Disc {
+pub enum Disc {
     White,
     Red,
     Empty,
@@ -75,7 +75,7 @@ impl fmt::Display for GameState {
                     Disc::Empty => write!(f, ".")?,
                 }
             }
-            writeln!(f);
+            writeln!(f)?;
         }
         Ok(())
     }

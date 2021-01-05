@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub type Bitboard = u64;
 
 // board dimensions
@@ -30,10 +32,10 @@ pub fn has_won(board: Bitboard) -> bool {
 }
 
 fn get_height_bit(p1: Bitboard, p2: Bitboard, column: u32) -> Bitboard {
-    let columnMask = FIRST_COLUMN << (BIT_HEIGHT * column);
+    let column_mask = FIRST_COLUMN << (BIT_HEIGHT * column);
     //TODO: check x86 BSR instruction
     let mut both = p1 | p2;
-    both &= columnMask;
+    both &= column_mask;
     both += 1 << (BIT_HEIGHT * column);
     both
 }
