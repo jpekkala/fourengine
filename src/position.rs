@@ -130,4 +130,39 @@ mod tests {
              ..OXOXX\n";
         assert_eq!(position.to_string(), expected);
     }
+
+    #[test]
+    fn win_checking() {
+        // horizontal
+        {
+            let position = Position::from_variation("4455667");
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+        }
+
+        // vertical
+        {
+            let position = Position::from_variation("4343434");
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+        }
+
+        // slash (/)
+        {
+            let position = Position::from_variation("45567667677");
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+        }
+
+        // backslash (\)
+        {
+            let position = Position::from_variation("76654554544");
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+        }
+    }
 }
