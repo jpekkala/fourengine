@@ -1,9 +1,9 @@
-use crate::game_state::GameState;
+use crate::position::Position;
 use std::io;
 
 mod bitboard;
 mod constants;
-mod game_state;
+mod position;
 mod trans_table;
 
 fn main() {
@@ -12,19 +12,8 @@ fn main() {
         .read_line(&mut variation)
         .expect("Failed to read line");
 
-    let won = check_variation(variation);
-    println!("The variation contains a win: {}", won);
-}
+    let position = Position::from_variation(variation);
 
-fn check_variation(variation: String) -> bool {
-    let mut game_state = GameState::new();
-
-    for ch in variation.trim().chars() {
-        let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
-        game_state = game_state.drop(column);
-    }
-
-    println!("The board is\n{}", game_state);
-
-    return game_state.has_won();
+    println!("The board is\n{}", position);
+    println!("The variation contains a win: {}", position.has_won());
 }

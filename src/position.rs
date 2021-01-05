@@ -1,11 +1,13 @@
 use std::fmt;
 
 use crate::bitboard;
-use crate::bitboard::Bitboard;
+use crate::bitboard::{Bitboard, PositionCode};
 use crate::constants::*;
 use std::fmt::Formatter;
 
-pub struct GameState {
+/// Represents the board state of a particular position but not how the position was arrived at.
+/// Contains the same information as PositionCode but in a format that is easier to manipulate.
+pub struct Position {
     pub ply: u32,
 
     pub current: Bitboard,
@@ -18,21 +20,30 @@ pub enum Disc {
     Empty,
 }
 
-impl GameState {
-    pub fn new() -> GameState {
-        GameState {
+impl Position {
+    pub fn empty() -> Position {
+        Position {
             ply: 0,
             current: Bitboard::empty(),
             other: Bitboard::empty(),
         }
     }
 
-    pub fn drop(&self, column: u32) -> GameState {
+    pub fn from_variation(variation: String) -> Position {
+        let mut position = Position::empty();
+        for ch in variation.trim().chars() {
+            let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
+            position = position.drop(column);
+        }
+        position
+    }
+
+    pub fn drop(&self, column: u32) -> Position {
         let new_board = self.current.drop(self.other, column);
         if !new_board.is_legal() {
             panic!("Invalid move");
         }
-        GameState {
+        Position {
             current: self.other,
             other: new_board,
             ply: self.ply + 1
@@ -43,7 +54,7 @@ impl GameState {
         return self.current.has_won() || self.other.has_won();
     }
 
-    pub fn get_disc_at(&self, x: u32, y: u32) -> Disc {
+    fn get_ordered_boards(&self) -> (Bitboard, Bitboard) {
         let white_moves = self.ply % 2 == 0;
         let white_board = if white_moves {
             self.current
@@ -56,6 +67,12 @@ impl GameState {
             self.current
         };
 
+        (white_board, red_board)
+    }
+
+    pub fn get_disc_at(&self, x: u32, y: u32) -> Disc {
+        let (white_board, red_board) = self.get_ordered_boards();
+
         if white_board.has_disc(x, y) {
             Disc::White
         } else if red_board.has_disc(x, y) {
@@ -64,9 +81,14 @@ impl GameState {
             Disc::Empty
         }
     }
+
+    pub fn to_position_code(&self) -> PositionCode {
+        let (white_board, red_board) = self.get_ordered_boards();
+        PositionCode::new(white_board, red_board)
+    }
 }
 
-impl fmt::Display for GameState {
+impl fmt::Display for Position {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for y in (0..BOARD_HEIGHT).rev() {
             for x in 0..BOARD_WIDTH {

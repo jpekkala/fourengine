@@ -1,7 +1,7 @@
 use num_traits::FromPrimitive;
 
 use crate::bitboard;
-use crate::bitboard::Position;
+use crate::bitboard::PositionCode;
 use crate::constants::*;
 
 type Entry = bitboard::BoardInteger;
@@ -10,7 +10,7 @@ type Entry = bitboard::BoardInteger;
 /// room for two positions. If more than two positions need to be stored in the same slot, the
 /// replacement scheme TwoBig1 (Breuker et al. 1994) is used. The replacement scheme keeps the most
 /// expensive entry and the most recent entry.
-struct TransTable {
+pub struct TransTable {
     /// How many slots the table has. The table size also acts as a hash function so preferably it
     /// should be a prime. Note that the entries array is twice of table_size because each slot can
     /// fit two positions.
@@ -59,7 +59,7 @@ impl TransTable {
         }
     }
 
-    pub fn store(&mut self, position: Position, score: Score, work: u32) {
+    pub fn store(&mut self, position: PositionCode, score: Score, work: u32) {
         let position_integer = position.to_integer();
         let index: usize = ((position_integer % self.table_size as u64) * 2) as usize;
         let key: Entry = position_integer / self.table_size as Entry;
@@ -88,7 +88,7 @@ impl TransTable {
         }
     }
 
-    pub fn fetch(&self, position: Position) -> Score {
+    pub fn fetch(&self, position: PositionCode) -> Score {
         let position_integer = position.to_integer();
         let index: usize = ((position_integer % self.table_size as u64) * 2) as usize;
         let key: Entry = position_integer / self.table_size as Entry;
@@ -144,7 +144,7 @@ mod tests {
     fn remember_stored_value() {
         let mut tt = TransTable::new(1021);
 
-        let position = Position::from_integer(1000);
+        let position = PositionCode::from_integer(1000);
         tt.store(position, Score::Win, 0);
         assert_eq!(tt.stored_count, 1);
         assert_eq!(tt.fetch(position), Score::Win);
@@ -155,10 +155,10 @@ mod tests {
         let table_size = 1021;
         let mut tt = TransTable::new(table_size);
 
-        let pos1 = Position::from_integer(table_size as BoardInteger);
-        let pos2 = Position::from_integer(2 * table_size as BoardInteger);
-        let pos3 = Position::from_integer(3 * table_size as BoardInteger);
-        let pos4 = Position::from_integer(4 * table_size as BoardInteger);
+        let pos1 = PositionCode::from_integer(table_size as BoardInteger);
+        let pos2 = PositionCode::from_integer(2 * table_size as BoardInteger);
+        let pos3 = PositionCode::from_integer(3 * table_size as BoardInteger);
+        let pos4 = PositionCode::from_integer(4 * table_size as BoardInteger);
 
         tt.store(pos1, Score::Win, 300);
         tt.store(pos2, Score::Win, 600);

@@ -13,7 +13,7 @@ pub type BoardInteger = u64;
 pub struct Bitboard(BoardInteger);
 
 #[derive(Copy, Clone)]
-pub struct Position(BoardInteger);
+pub struct PositionCode(BoardInteger);
 
 // the column height including the buffer cell
 pub const BIT_HEIGHT: u32 = BOARD_HEIGHT + 1;
@@ -74,13 +74,13 @@ impl Bitboard {
     }
 }
 
-impl Position {
-    pub fn new(p1: Bitboard, p2: Bitboard) -> Position {
-        Position(BOTTOM_ROW + p1.0 + p1.0 + p2.0)
+impl PositionCode {
+    pub fn new(p1: Bitboard, p2: Bitboard) -> PositionCode {
+        PositionCode(BOTTOM_ROW + p1.0 + p1.0 + p2.0)
     }
 
-    pub fn from_integer(integer: BoardInteger) -> Position {
-        Position(integer)
+    pub fn from_integer(integer: BoardInteger) -> PositionCode {
+        PositionCode(integer)
     }
 
     pub fn to_integer(&self) -> BoardInteger {
