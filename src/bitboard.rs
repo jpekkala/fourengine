@@ -63,6 +63,11 @@ impl Bitboard {
         both
     }
 
+    pub fn get_height(&self, other: Bitboard, column: u32) -> u32 {
+        let bit = self.get_height_bit(other, column) >> (BIT_HEIGHT * column);
+        bit.trailing_zeros()
+    }
+
     pub fn drop(&self, other: Bitboard, column: u32) -> Bitboard {
         let bit = self.get_height_bit(other, column);
         Bitboard(self.0 | bit)

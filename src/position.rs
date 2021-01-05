@@ -87,6 +87,10 @@ impl Position {
         let (white_board, red_board) = self.get_ordered_boards();
         PositionCode::new(white_board, red_board)
     }
+
+    pub fn get_height(&self, column: u32) -> u32 {
+        self.current.get_height(self.other, column)
+    }
 }
 
 impl fmt::Display for Position {
@@ -130,6 +134,18 @@ mod tests {
              ..X.XO.\n\
              ..OXOXX\n";
         assert_eq!(position.to_string(), expected);
+    }
+
+    #[test]
+    fn height() {
+        let position = Position::from_variation("436675553");
+        assert_eq!(position.get_height(0), 0);
+        assert_eq!(position.get_height(1), 0);
+        assert_eq!(position.get_height(2), 2);
+        assert_eq!(position.get_height(3), 1);
+        assert_eq!(position.get_height(4), 3);
+        assert_eq!(position.get_height(5), 2);
+        assert_eq!(position.get_height(6), 1);
     }
 
     #[test]
