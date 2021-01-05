@@ -105,8 +105,9 @@ impl TransTable {
         }
 
         match found_entry {
-            Some(entry) => Score::from_u64((entry & self.score_mask) >> self.key_bits)
-                .expect("Invalid score"),
+            Some(entry) => {
+                Score::from_u64((entry & self.score_mask) >> self.key_bits).expect("Invalid score")
+            }
             None => Score::Unknown,
         }
     }

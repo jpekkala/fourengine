@@ -29,7 +29,7 @@ impl Position {
         }
     }
 
-    pub fn from_variation(variation: String) -> Position {
+    pub fn from_variation(variation: &str) -> Position {
         let mut position = Position::empty();
         for ch in variation.trim().chars() {
             let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
@@ -46,7 +46,7 @@ impl Position {
         Position {
             current: self.other,
             other: new_board,
-            ply: self.ply + 1
+            ply: self.ply + 1,
         }
     }
 
@@ -101,5 +101,33 @@ impl fmt::Display for Position {
             writeln!(f)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn draw_from_variation() {
+        let position = Position::from_variation("444444");
+        let expected = "\
+             ...O...\n\
+             ...X...\n\
+             ...O...\n\
+             ...X...\n\
+             ...O...\n\
+             ...X...\n";
+        assert_eq!(position.to_string(), expected);
+
+        let position = Position::from_variation("436675553");
+        let expected = "\
+             .......\n\
+             .......\n\
+             .......\n\
+             ....O..\n\
+             ..X.XO.\n\
+             ..OXOXX\n";
+        assert_eq!(position.to_string(), expected);
     }
 }

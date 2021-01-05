@@ -12,7 +12,7 @@ fn main() {
         .read_line(&mut variation)
         .expect("Failed to read line");
 
-    let position = Position::from_variation(variation);
+    let position = Position::from_variation(&variation);
 
     println!("The board is\n{}", position);
     println!("The variation contains a win: {}", position.has_won());
