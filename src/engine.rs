@@ -7,7 +7,7 @@ use crate::trans_table::TransTable;
 pub struct Engine {
     pub position: Position,
     trans_table: TransTable,
-    history: HistoryHeuristic,
+    pub history: HistoryHeuristic,
     pub work_count: usize,
 }
 
@@ -125,15 +125,15 @@ impl Engine {
         // TODO: Order moves
         possible_moves.sort_by(|a, b| {
             self.history
-                .get_score(a.x, a.y)
-                .cmp(&self.history.get_score(b.x, b.y))
+                .get_score(b.x, b.y)
+                .cmp(&self.history.get_score(a.x, a.y))
         });
 
         // alpha-beta
         let old_position = self.position;
         let original_interior_count = self.work_count;
         let mut unknown_count = 0;
-        for m in possible_moves {
+        for (index, m) in possible_moves.iter().enumerate() {
             self.position = old_position.drop(m.x).unwrap();
 
             let score = self
@@ -156,8 +156,10 @@ impl Engine {
             }
 
             if new_alpha >= new_beta {
-                //self.history.increase_score(m.x, m.y, 1 << 3);
-                // TODO: update history score
+                self.history.increase_score(m.x, m.y, 1);
+                for i in 0..index {
+                    self.history.increase_score(possible_moves[i].x, possible_moves[i].y, -1);
+                }
                 break;
             }
 

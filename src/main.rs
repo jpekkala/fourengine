@@ -12,6 +12,7 @@ mod trans_table;
 
 fn main() {
     let mut variation = String::new();
+    println!("Input variation:");
     io::stdin()
         .read_line(&mut variation)
         .expect("Failed to read line");
@@ -23,6 +24,7 @@ fn main() {
     let start = Instant::now();
     let result = engine.solve();
     let duration = start.elapsed();
+    println!("History is\n{}", engine.history);
     println!("The result is {:?}", result);
     println!("Work count is {}", engine.work_count);
     println!("Elapsed time is {:?}", duration);

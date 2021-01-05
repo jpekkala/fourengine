@@ -1,8 +1,15 @@
+use std::fmt;
+
 use crate::bitboard::{BOARD_HEIGHT, BOARD_WIDTH};
 use std::cmp::min;
+use std::fmt::Formatter;
 
 pub struct HistoryHeuristic {
     table: [i32; (BOARD_WIDTH * BOARD_HEIGHT) as usize],
+}
+
+fn get_index(x: u32, y: u32) -> usize {
+    (x * BOARD_HEIGHT + y) as usize
 }
 
 impl HistoryHeuristic {
@@ -35,6 +42,14 @@ impl HistoryHeuristic {
     }
 }
 
-fn get_index(x: u32, y: u32) -> usize {
-    (x * BOARD_HEIGHT + y) as usize
+impl fmt::Display for HistoryHeuristic {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for y in (0..BOARD_HEIGHT).rev() {
+            for x in 0..BOARD_WIDTH {
+                write!(f, "{:>10} ", self.get_score(x,y))?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
 }
