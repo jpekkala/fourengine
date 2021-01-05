@@ -91,6 +91,37 @@ impl Bitboard {
         }
         Bitboard(mirror)
     }
+
+    fn get_threat_board(&self, other: Bitboard) -> BoardInteger {
+        let board = self.0;
+
+        let vertical = (board << 1) & (board << 2) & (board << 3);
+        let horizontal = threat_line(board, BIT_HEIGHT);
+        let diagonal1 = threat_line(board, BIT_HEIGHT + 1);
+        let diagonal2 = threat_line(board, BIT_HEIGHT + 2);
+
+        let all_threats = vertical | horizontal | diagonal1 | diagonal2;
+
+        all_threats & (FULL_BOARD ^ other.0)
+    }
+
+    pub fn count_threats(&self, other: Bitboard) -> u32 {
+        let threat_board = self.get_threat_board(other);
+        threat_board.count_ones()
+    }
+}
+
+#[inline]
+fn threat_line(board: BoardInteger, shift_amount: u32) -> BoardInteger {
+    let right_helper = (board >> shift_amount) & (board >> 2 * shift_amount);
+    let right_triple = right_helper & (board >> 3 * shift_amount);
+    let right_hole = right_helper & (board << shift_amount);
+
+    let left_helper = (board << shift_amount) & (board << 2 * shift_amount);
+    let left_triple = left_helper & (board << 3 * shift_amount);
+    let left_hole = left_helper & (board >> shift_amount);
+
+    right_triple | right_hole | left_triple | left_hole
 }
 
 impl PositionCode {

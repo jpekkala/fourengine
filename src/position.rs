@@ -233,4 +233,11 @@ mod tests {
             assert_eq!(red_board.has_won(), false);
         }
     }
+
+    #[test]
+    fn threat_counting() {
+        let position = Position::from_variation("43443555");
+        assert_eq!(position.current.count_threats(position.other), 2);
+        assert_eq!(position.other.count_threats(position.current), 0);
+    }
 }
