@@ -21,14 +21,14 @@ impl GameState {
     pub fn new() -> GameState {
         GameState {
             ply: 0,
-            current: 0,
-            other: 0,
+            current: Bitboard::empty(),
+            other: Bitboard::empty(),
         }
     }
 
     pub fn drop(&mut self, column: u32) {
-        let new_board = self.current | bitboard::drop(self.current, self.other, column);
-        if !bitboard::is_legal(new_board) {
+        let new_board = self.current.drop(self.other, column);
+        if !new_board.is_legal() {
             panic!("Invalid move");
         }
         self.current = self.other;
@@ -37,12 +37,10 @@ impl GameState {
     }
 
     pub fn has_won(&self) -> bool {
-        bitboard::has_won(self.current) || bitboard::has_won(self.other)
+        return self.current.has_won() || self.other.has_won();
     }
 
     pub fn get_disc_at(&self, x: u32, y: u32) -> Disc {
-        let cell: Bitboard = 1 << (bitboard::WIDTH * x + y);
-
         let white_moves = self.ply % 2 == 0;
         let white_board = if white_moves {
             self.current
@@ -55,9 +53,9 @@ impl GameState {
             self.current
         };
 
-        if white_board & cell != 0 {
+        if white_board.has_disc(x, y) {
             Disc::White
-        } else if red_board & cell != 0 {
+        } else if red_board.has_disc(x, y) {
             Disc::Red
         } else {
             Disc::Empty

@@ -2,9 +2,9 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::bitboard;
-use crate::bitboard::Bitboard;
+use crate::bitboard::Position;
 
-type Entry = u64;
+type Entry = bitboard::BoardInteger;
 
 /// A hash table for connect-4 positions. This table is two-level which means that each slot has
 /// room for two positions. If more than two positions need to be stored in the same slot, the
@@ -71,9 +71,10 @@ impl TransTable {
         }
     }
 
-    pub fn store(&mut self, position: Bitboard, score: Score, work: u32) {
-        let index: usize = ((position % self.table_size as u64) * 2) as usize;
-        let key: Entry = position / self.table_size as u64;
+    pub fn store(&mut self, position: Position, score: Score, work: u32) {
+        let position_integer = position.to_integer();
+        let index: usize = ((position_integer % self.table_size as u64) * 2) as usize;
+        let key: Entry = position_integer / self.table_size as Entry;
 
         let new_entry: Entry =
             key | ((score as Entry) << self.key_bits) | ((work as Entry) << self.key_score_bits);
@@ -99,9 +100,10 @@ impl TransTable {
         }
     }
 
-    pub fn fetch(&self, position: Bitboard) -> Score {
-        let index: usize = ((position % self.table_size as u64) * 2) as usize;
-        let key: Entry = position / self.table_size as u64;
+    pub fn fetch(&self, position: Position) -> Score {
+        let position_integer = position.to_integer();
+        let index: usize = ((position_integer % self.table_size as u64) * 2) as usize;
+        let key: Entry = position_integer / self.table_size as Entry;
 
         let mut found_entry = None;
         let expensive_entry = self.entries[index];
@@ -137,6 +139,7 @@ fn closest_power_of_two(number: usize) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::bitboard::BoardInteger;
 
     #[test]
     fn validate_masks() {
@@ -153,7 +156,7 @@ mod tests {
     fn remember_stored_value() {
         let mut tt = TransTable::new(1021);
 
-        let position: Bitboard = 1000;
+        let position = Position::from_integer(1000);
         tt.store(position, Score::Win, 0);
         assert_eq!(tt.stored_count, 1);
         assert_eq!(tt.fetch(position), Score::Win);
@@ -164,10 +167,10 @@ mod tests {
         let table_size = 1021;
         let mut tt = TransTable::new(table_size);
 
-        let pos1 = table_size as Bitboard;
-        let pos2 = 2 * table_size as Bitboard;
-        let pos3 = 3 * table_size as Bitboard;
-        let pos4 = 4 * table_size as Bitboard;
+        let pos1 = Position::from_integer(table_size as BoardInteger);
+        let pos2 = Position::from_integer(2 * table_size as BoardInteger);
+        let pos3 = Position::from_integer(3 * table_size as BoardInteger);
+        let pos4 = Position::from_integer(4 * table_size as BoardInteger);
 
         tt.store(pos1, Score::Win, 300);
         tt.store(pos2, Score::Win, 600);
