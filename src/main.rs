@@ -1,12 +1,12 @@
-use crate::constants::Score;
 use crate::engine::Engine;
 use crate::position::Position;
+use crate::score::Score;
 use std::io;
 
 mod bitboard;
-mod constants;
 mod engine;
 mod position;
+mod score;
 mod trans_table;
 
 fn main() {

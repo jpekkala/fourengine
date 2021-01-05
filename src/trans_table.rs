@@ -2,7 +2,7 @@ use num_traits::FromPrimitive;
 
 use crate::bitboard;
 use crate::bitboard::PositionCode;
-use crate::constants::*;
+use crate::score::*;
 
 type Entry = bitboard::BoardInteger;
 
@@ -38,7 +38,7 @@ const SCORE_BITS: u32 = 3;
 impl TransTable {
     pub fn new(table_size: usize) -> TransTable {
         let entries: Vec<Entry> = vec![0; table_size * 2];
-        let largest_possible_position = (1 << POSITION_BITS) - 1;
+        let largest_possible_position = (1 << bitboard::POSITION_BITS) - 1;
         let key_size = closest_power_of_two(largest_possible_position / table_size);
         let key_score_size = key_size + SCORE_BITS;
 

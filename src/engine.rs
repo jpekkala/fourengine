@@ -1,6 +1,6 @@
-use crate::constants::Score::Draw;
-use crate::constants::{Score, BOARD_HEIGHT, BOARD_WIDTH};
+use crate::bitboard::{BOARD_HEIGHT, BOARD_WIDTH};
 use crate::position::Position;
+use crate::score::Score;
 use crate::trans_table::TransTable;
 
 pub struct Engine {
