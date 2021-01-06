@@ -32,9 +32,9 @@ impl Benchmark {
     }
 }
 
-fn run_variation(variation: &str) -> Benchmark {
+fn run_variation(engine: &mut Engine,variation: &str) -> Benchmark {
     let position = Position::from_variation(&variation);
-    let mut engine = Engine::new(position);
+    engine.set_position(position);
     let start = Instant::now();
     let score = engine.solve();
     let duration = start.elapsed();
@@ -50,6 +50,7 @@ fn run_test_file(filename: &str) -> io::Result<()> {
     let file = File::open(filename)?;
     let reader = BufReader::new(file);
     let mut benchmarks = Vec::new();
+    let mut engine = Engine::new();
     for line in reader.lines() {
         if let Some((variation, score)) = parse_line(line?) {
             println!(
@@ -57,7 +58,8 @@ fn run_test_file(filename: &str) -> io::Result<()> {
                 format!("{:?}", score),
                 variation
             );
-            let benchmark = run_variation(&variation);
+            engine.reset();
+            let benchmark = run_variation(&mut engine, &variation);
             assert_eq!(benchmark.score, score, "Invalid score");
             benchmarks.push(benchmark);
         }
@@ -139,7 +141,8 @@ fn main() {
 
         println!("The board is\n{}", Position::from_variation(&variation));
         println!("Solving...");
-        let benchmark = run_variation(&variation);
+        let mut engine = Engine::new();
+        let benchmark = run_variation(&mut engine, &variation);
         benchmark.print();
     }
 }

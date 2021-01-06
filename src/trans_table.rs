@@ -65,9 +65,17 @@ impl TransTable {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.stored_count = 0;
+        for slot in &mut self.slots {
+            slot.expensive = 0;
+            slot.recent = 0;
+        }
+    }
+
     pub fn store(&mut self, position: PositionCode, score: Score, work: u32) {
         let position_integer = position.to_integer();
-        let index: usize = (position_integer % self.table_size as u64) as usize;
+        let index: usize = (position_integer % self.table_size as Entry) as usize;
         let key: Entry = position_integer / self.table_size as Entry;
 
         let new_entry: Entry =

@@ -52,13 +52,22 @@ impl Move {
 }
 
 impl Engine {
-    pub fn new(position: Position) -> Engine {
+    pub fn new() -> Engine {
         Engine {
-            position,
+            position: Position::empty(),
             trans_table: TransTable::new(67108859),
             work_count: 0,
             heuristic: FixedHeuristic {},
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.work_count = 0;
+        self.trans_table.reset();
+    }
+
+    pub fn set_position(&mut self, position: Position) {
+        self.position = position;
     }
 
     pub fn solve(&mut self) -> Score {
@@ -139,7 +148,7 @@ impl Engine {
         possible_moves.sort_by(|a, b| {
             let threats1 = a.new_board.count_threats(a.enemy_board);
             let threats2 = b.new_board.count_threats(b.enemy_board);
-            if (threats1 == threats2) {
+            if threats1 == threats2 {
                 self.heuristic
                     .get_value(b.x, b.y)
                     .cmp(&self.heuristic.get_value(a.x, a.y))
