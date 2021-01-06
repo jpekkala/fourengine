@@ -56,16 +56,13 @@ impl Bitboard {
 
     fn get_height_bit(&self, other: Bitboard, column: u32) -> BoardInteger {
         let column_mask = FIRST_COLUMN << (BIT_HEIGHT * column);
-        //TODO: check x86 BSR instruction
-        let mut both = self.0 | other.0;
-        both &= column_mask;
-        both += 1 << (BIT_HEIGHT * column);
-        both
+        let both = (self.0 | other.0) + BOTTOM_ROW;
+        both & column_mask
     }
 
     pub fn get_height(&self, other: Bitboard, column: u32) -> u32 {
-        let bit = self.get_height_bit(other, column) >> (BIT_HEIGHT * column);
-        bit.trailing_zeros()
+        let both = self.0 | other.0;
+        ((both >> (BIT_HEIGHT * column)) + 1).trailing_zeros()
     }
 
     pub fn drop(&self, other: Bitboard, column: u32) -> Bitboard {
