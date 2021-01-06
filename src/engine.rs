@@ -71,6 +71,11 @@ impl Engine {
     }
 
     pub fn solve(&mut self) -> Score {
+        for m in get_possible_moves(&self.position) {
+            if m.has_won() {
+                return Score::Win;
+            }
+        }
         self.negamax(Score::Loss, Score::Win, 42)
     }
 
@@ -79,7 +84,7 @@ impl Engine {
 
         self.work_count += 1;
 
-        if self.position.ply == BOARD_WIDTH * BOARD_HEIGHT {
+        if self.position.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
             return Score::Draw;
         }
 
@@ -99,6 +104,41 @@ impl Engine {
         let mut new_beta = beta;
 
         let position = self.position.to_position_code();
+
+        let mut possible_moves = get_possible_moves(&self.position);
+
+        let mut forced_move = None;
+        for m in &possible_moves {
+            if m.is_forced_move() {
+                if forced_move.is_some() {
+                    // double threat
+                    return Score::Loss;
+                }
+                if m.has_enemy_threat_above() {
+                    return Score::Loss;
+                }
+                forced_move = Some(m);
+            }
+        }
+
+        if let Some(m) = forced_move {
+            let old_position = self.position;
+            self.position = old_position.drop(m.x).unwrap();
+            let score = self.negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
+                .flip();
+            self.position = old_position;
+            return score;
+        }
+
+        if symmetric {
+            possible_moves.retain(|m| m.x <= BOARD_WIDTH / 2);
+        }
+
+        possible_moves.retain(|m| !m.has_enemy_threat_above());
+        if possible_moves.is_empty() {
+            return Score::Loss;
+        }
+
         let trans_score = self.trans_table.fetch(position);
         if trans_score.is_exact() {
             return trans_score;
@@ -115,34 +155,6 @@ impl Engine {
             if new_alpha == new_beta {
                 return trans_score;
             }
-        }
-
-        let mut possible_moves = get_possible_moves(&self.position);
-        for m in &possible_moves {
-            if m.has_won() {
-                return Score::Win;
-            }
-        }
-
-        let mut forced_move = None;
-        for m in &possible_moves {
-            if m.is_forced_move() {
-                if forced_move.is_some() {
-                    // double threat
-                    return Score::Loss;
-                }
-                forced_move = Some(m);
-            }
-        }
-        if let Some(drop) = forced_move {
-            possible_moves = vec![drop.clone()];
-        } else if symmetric {
-            possible_moves.retain(|m| m.x <= BOARD_WIDTH / 2);
-        }
-
-        possible_moves.retain(|m| !m.has_enemy_threat_above());
-        if possible_moves.is_empty() {
-            return Score::Loss;
         }
 
         possible_moves.sort_by(|a, b| {
