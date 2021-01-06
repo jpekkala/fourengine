@@ -16,7 +16,7 @@ pub type BoardInteger = u64;
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Bitboard(BoardInteger);
 
-#[derive(Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 pub struct PositionCode(BoardInteger);
 
 // the column height including the buffer cell

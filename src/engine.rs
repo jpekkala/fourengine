@@ -61,9 +61,7 @@ impl Engine {
     }
 
     fn negamax(&mut self, alpha: Score, beta: Score, max_depth: u32) -> Score {
-        if self.position.has_won() {
-            panic!("Already won");
-        }
+        debug_assert!(!self.position.has_won(), "Already won");
 
         self.work_count += 1;
 
@@ -133,10 +131,11 @@ impl Engine {
                 .cmp(&self.heuristic.get_value(a.x, a.y))
         });
 
-        // alpha-beta
         let old_position = self.position;
         let original_interior_count = self.work_count;
-        let mut unknown_count = 0;
+        // If any of the children remains unknown, we may not have an exact score. This can happen
+        // alpha-beta cutoffs and depth limits.
+        let mut unknown_count = possible_moves.len();
         for (index, m) in possible_moves.iter().enumerate() {
             self.position = old_position.drop(m.x).unwrap();
 
@@ -144,9 +143,8 @@ impl Engine {
                 .negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
                 .flip();
 
-            if score == Score::Unknown {
-                unknown_count += 1;
-                continue;
+            if score != Score::Unknown {
+                unknown_count -= 1;
             }
 
             if score > best_score {
