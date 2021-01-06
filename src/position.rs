@@ -109,6 +109,7 @@ impl Position {
         }
     }
 
+    #[allow(dead_code)]
     pub fn flip(&self) -> Position {
         Position {
             ply: self.ply,

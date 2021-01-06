@@ -5,7 +5,7 @@ use clap::{App, Arg};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
-use std::{env, io};
+use std::{io};
 
 mod bitboard;
 mod engine;
@@ -15,7 +15,6 @@ mod score;
 mod trans_table;
 
 struct Benchmark {
-    variation: String,
     score: Score,
     duration: Duration,
     work_count: usize,
@@ -41,7 +40,6 @@ fn run_variation(variation: &str) -> Benchmark {
     let duration = start.elapsed();
 
     Benchmark {
-        variation: String::from(variation),
         score,
         duration,
         work_count: engine.work_count,
@@ -118,7 +116,6 @@ fn parse_line(line: String) -> Option<(String, Score)> {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
     let matches = App::new("Fourengine")
         .version("1.0")
         .about("Connect-4 engine")
@@ -133,7 +130,7 @@ fn main() {
         .get_matches();
 
     if let Some(test_file) = matches.value_of("test_file") {
-        run_test_file(test_file);
+        run_test_file(test_file).expect("Cannot read file");
     } else {
         read_from_stdin();
     }

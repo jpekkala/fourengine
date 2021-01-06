@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::fmt;
 
 use crate::bitboard::{BOARD_HEIGHT, BOARD_WIDTH};
@@ -70,7 +72,7 @@ impl Heuristic for FixedHeuristic {
         TABLE[(BOARD_HEIGHT - y - 1) as usize][x as usize]
     }
 
-    fn increase_value(&self, x: u32, y: u32, amount: i32) {}
+    fn increase_value(&self, _x: u32, _y: u32, _amount: i32) {}
 }
 
 impl fmt::Display for HistoryHeuristic {

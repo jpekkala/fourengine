@@ -27,6 +27,7 @@ impl Score {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_compatible(self, other: Score) -> bool {
         if self == other || self == Score::Unknown || other == Score::Unknown {
             true
