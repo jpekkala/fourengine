@@ -44,6 +44,11 @@ impl Move {
         // must be legal for the opponent if it was legal for the current player
         self.enemy_board.drop(self.old_board, self.x).has_won()
     }
+
+    pub fn has_enemy_threat_above(&self) -> bool {
+        let enemy_board = self.enemy_board.drop(self.new_board, self.x);
+        enemy_board.is_legal() & enemy_board.has_won()
+    }
 }
 
 impl Engine {
@@ -126,10 +131,21 @@ impl Engine {
             possible_moves.retain(|m| m.x <= BOARD_WIDTH / 2);
         }
 
+        possible_moves.retain(|m| !m.has_enemy_threat_above());
+        if possible_moves.is_empty() {
+            return Score::Loss;
+        }
+
         possible_moves.sort_by(|a, b| {
-            self.heuristic
-                .get_value(b.x, b.y)
-                .cmp(&self.heuristic.get_value(a.x, a.y))
+            let threats1 = a.new_board.count_threats(a.enemy_board);
+            let threats2 = b.new_board.count_threats(b.enemy_board);
+            if (threats1 == threats2) {
+                self.heuristic
+                    .get_value(b.x, b.y)
+                    .cmp(&self.heuristic.get_value(a.x, a.y))
+            } else {
+                threats2.cmp(&threats1)
+            }
         });
 
         let old_position = self.position;
