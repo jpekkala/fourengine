@@ -6,16 +6,21 @@ use crate::score::*;
 
 type Entry = bitboard::BoardInteger;
 
+#[derive(Copy, Clone)]
+struct Slot {
+    expensive: Entry,
+    recent: Entry,
+}
+
 /// A hash table for connect-4 positions. This table is two-level which means that each slot has
 /// room for two positions. If more than two positions need to be stored in the same slot, the
 /// replacement scheme TwoBig1 (Breuker et al. 1994) is used. The replacement scheme keeps the most
 /// expensive entry and the most recent entry.
 pub struct TransTable {
     /// How many slots the table has. The table size also acts as a hash function so preferably it
-    /// should be a prime. Note that the entries array is twice of table_size because each slot can
-    /// fit two positions.
+    /// should be a prime
     table_size: usize,
-    entries: Vec<Entry>,
+    slots: Vec<Slot>,
     /// How many entries are saved. For diagnostics only
     stored_count: usize,
 
@@ -38,7 +43,7 @@ const SCORE_BITS: u32 = 3;
 
 impl TransTable {
     pub fn new(table_size: usize) -> TransTable {
-        let entries: Vec<Entry> = vec![0; table_size * 2];
+        let slots: Vec<Slot> = vec![Slot { expensive: 0, recent: 0 }; table_size];
         let largest_possible_position = (1 << bitboard::POSITION_BITS) - 1;
         let key_size = closest_power_of_two(largest_possible_position / table_size);
         let key_score_size = key_size + SCORE_BITS;
@@ -49,7 +54,7 @@ impl TransTable {
 
         TransTable {
             table_size,
-            entries,
+            slots,
             stored_count: 0,
             key_bits: key_size,
             key_score_bits: key_score_size,
@@ -62,44 +67,49 @@ impl TransTable {
 
     pub fn store(&mut self, position: PositionCode, score: Score, work: u32) {
         let position_integer = position.to_integer();
-        let index: usize = ((position_integer % self.table_size as u64) * 2) as usize;
+        let index: usize = (position_integer % self.table_size as u64) as usize;
         let key: Entry = position_integer / self.table_size as Entry;
 
         let new_entry: Entry =
             key | ((score as Entry) << self.key_bits) | ((work as Entry) << self.key_score_bits);
-        let expensive_entry = self.entries[index];
-        let recent_entry = self.entries[index + 1];
+
+        let mut slot = self.slots[index];
+        let expensive_entry = slot.expensive;
+        let recent_entry = slot.recent;
 
         if expensive_entry == 0 {
             self.stored_count += 1;
-            self.entries[index] = new_entry
+            slot.expensive = new_entry;
         } else if (expensive_entry & self.key_mask) == key {
-            self.entries[index] = new_entry;
+            slot.expensive = new_entry;
         } else if work >= (expensive_entry >> self.key_score_bits) as u32 {
             if recent_entry == 0 {
                 self.stored_count += 1;
             }
-            self.entries[index] = new_entry;
-            self.entries[index + 1] = expensive_entry;
+            slot.expensive = new_entry;
+            slot.recent = expensive_entry;
         } else {
             if recent_entry == 0 {
                 self.stored_count += 1;
             }
-            self.entries[index + 1] = new_entry;
+            slot.recent = new_entry;
         }
+        self.slots[index] = slot;
     }
 
     pub fn fetch(&self, position: PositionCode) -> Score {
         let position_integer = position.to_integer();
-        let index: usize = ((position_integer % self.table_size as u64) * 2) as usize;
+        let index: usize = (position_integer % self.table_size as u64) as usize;
         let key: Entry = position_integer / self.table_size as Entry;
 
+        let slot = self.slots[index];
+
         let mut found_entry = None;
-        let expensive_entry = self.entries[index];
+        let expensive_entry = slot.expensive;
         if (expensive_entry & self.key_mask) == key {
             found_entry = Some(expensive_entry);
         } else {
-            let recent_entry = self.entries[index + 1];
+            let recent_entry = slot.recent;
             if (recent_entry & self.key_mask) == key {
                 found_entry = Some(recent_entry);
             }
