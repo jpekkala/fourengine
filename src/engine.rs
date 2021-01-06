@@ -91,10 +91,11 @@ impl Engine {
         }
 
         if trans_score != Score::Unknown {
-            if trans_score == Score::DrawOrLoss {
-                new_beta = Score::Draw;
-            } else if trans_score == Score::DrawOrWin {
+            if trans_score == Score::DrawOrWin {
                 new_alpha = Score::Draw;
+                best_score = Score::Draw;
+            } else if trans_score == Score::DrawOrLoss {
+                new_beta = Score::Draw;
             }
 
             if new_alpha == new_beta {
@@ -179,6 +180,12 @@ impl Engine {
             } else if best_score < Score::Draw {
                 best_score = Score::Unknown;
             }
+        }
+
+        if trans_score == Score::DrawOrLoss && best_score >= Score::Draw {
+            debug_assert!(best_score != Score::Win);
+            // we have an exact value
+            best_score = Score::Draw;
         }
 
         self.trans_table

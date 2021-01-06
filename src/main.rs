@@ -46,19 +46,6 @@ fn run_variation(variation: &str) -> Benchmark {
     }
 }
 
-fn read_from_stdin() {
-    let mut variation = String::new();
-    println!("Input variation:");
-    io::stdin()
-        .read_line(&mut variation)
-        .expect("Failed to read line");
-
-    println!("The board is\n{}", Position::from_variation(&variation));
-    println!("Solving...");
-    let benchmark = run_variation(&variation);
-    benchmark.print();
-}
-
 fn run_test_file(filename: &str) -> io::Result<()> {
     let file = File::open(filename)?;
     let reader = BufReader::new(file);
@@ -127,11 +114,32 @@ fn main() {
                 .about("Runs a test set from a file")
                 .takes_value(true),
         )
+        .arg(
+            Arg::new("variation")
+                .long("variation")
+                .about("Runs a specific variation")
+                .takes_value(true),
+        )
         .get_matches();
 
     if let Some(test_file) = matches.value_of("test_file") {
         run_test_file(test_file).expect("Cannot read file");
     } else {
-        read_from_stdin();
+        let variation = match matches.value_of("variation") {
+            Some(variation) => String::from(variation),
+            None => {
+                let mut str = String::new();
+                println!("Input variation:");
+                io::stdin()
+                    .read_line(&mut str)
+                    .expect("Failed to read line");
+                str
+            }
+        };
+
+        println!("The board is\n{}", Position::from_variation(&variation));
+        println!("Solving...");
+        let benchmark = run_variation(&variation);
+        benchmark.print();
     }
 }
