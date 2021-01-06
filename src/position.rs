@@ -96,11 +96,14 @@ impl Position {
         let code2 = PositionCode::new(flipped_current, flipped_other);
         let symmetric = code1 == code2;
         if code1 < code2 {
-            (Position {
-                ply: self.ply,
-                current: flipped_current,
-                other: flipped_other,
-            }, symmetric)
+            (
+                Position {
+                    ply: self.ply,
+                    current: flipped_current,
+                    other: flipped_other,
+                },
+                symmetric,
+            )
         } else {
             (*self, symmetric)
         }

@@ -31,16 +31,20 @@ impl Score {
         if self == other || self == Score::Unknown || other == Score::Unknown {
             true
         } else if self.is_exact() {
-            if (other.is_exact()) {
+            if other.is_exact() {
                 false
             } else {
                 other.is_compatible(self)
             }
         } else {
             match self {
-                Score::DrawOrLoss => other == Score::Draw || other == Score::Loss || other == Score::DrawOrWin,
-                Score::DrawOrWin => other == Score::Draw || other == Score::Win || other == Score::DrawOrLoss,
-                _ => false
+                Score::DrawOrLoss => {
+                    other == Score::Draw || other == Score::Loss || other == Score::DrawOrWin
+                }
+                Score::DrawOrWin => {
+                    other == Score::Draw || other == Score::Win || other == Score::DrawOrLoss
+                }
+                _ => false,
             }
         }
     }
