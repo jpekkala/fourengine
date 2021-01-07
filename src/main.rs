@@ -57,7 +57,8 @@ fn run_test_file(filename: &str) -> io::Result<()> {
                 format!("{:?}", score),
                 variation
             );
-            engine.reset();
+            //engine.reset();
+            engine.work_count = 0;
             let benchmark = run_variation(&mut engine, &variation);
             assert_eq!(benchmark.score, score, "Invalid score");
             benchmarks.push(benchmark);
