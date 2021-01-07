@@ -105,7 +105,6 @@ impl Engine {
         let mut new_alpha = alpha;
         let mut new_beta = beta;
 
-        let position = self.position.to_position_code();
         let mut possible_moves = get_possible_moves(&self.position);
 
         let mut forced_move = None;
@@ -142,7 +141,7 @@ impl Engine {
             return Score::Loss;
         }
 
-        let trans_score = self.trans_table.fetch(position);
+        let trans_score = self.trans_table.fetch(self.position);
         if trans_score.is_exact() {
             return trans_score;
         }
@@ -234,7 +233,7 @@ impl Engine {
         }
 
         self.trans_table
-            .store(self.position.to_position_code(), best_score, work as u32);
+            .store(self.position, best_score, work as u32);
         best_score
     }
 }

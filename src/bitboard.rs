@@ -33,9 +33,6 @@ pub enum Disc {
     Empty,
 }
 
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
-pub struct PositionCode(BoardInteger);
-
 // the column height including the buffer cell
 pub const BIT_HEIGHT: u32 = BOARD_HEIGHT + 1;
 
@@ -132,6 +129,31 @@ impl Position {
         }
     }
 
+    pub fn from_position_code(code: BoardInteger) -> Position {
+        // TODO: optimize?
+        let mut both = 0;
+        for x in 0..BOARD_WIDTH {
+            let column = (code >> x * BIT_HEIGHT) & FIRST_COLUMN;
+            let mut count = 0;
+            let mut temp = column;
+            while temp != 0 {
+                count += 1;
+                temp = temp >> 1;
+            }
+            assert!(count > 0);
+            let mask = (1 << (count - 1)) - 1;
+            both |= mask << x * BIT_HEIGHT;
+        }
+
+        let current = Bitboard(code & both);
+        let other = Bitboard(!code & both);
+
+        Position {
+            current,
+            other,
+        }
+    }
+
     pub fn from_variation(variation: &str) -> Position {
         let mut position = Position::empty();
         for ch in variation.trim().chars() {
@@ -215,22 +237,14 @@ impl Position {
         }
     }
 
-    pub fn to_position_code(&self) -> PositionCode {
-        PositionCode::new(self.current, self.other)
-    }
-
     pub fn normalize(&self) -> (Position, bool) {
-        let flipped_current = self.current.flip();
-        let flipped_other = self.other.flip();
-        let code1 = PositionCode::new(self.current, self.other);
-        let code2 = PositionCode::new(flipped_current, flipped_other);
+        let flipped = self.flip();
+        let code1 = self.to_position_code();
+        let code2 = flipped.to_position_code();
         let symmetric = code1 == code2;
         if code1 < code2 {
             (
-                Position {
-                    current: flipped_current,
-                    other: flipped_other,
-                },
+                flipped,
                 symmetric,
             )
         } else {
@@ -258,6 +272,10 @@ impl Position {
 
     pub fn count_threats(&self) -> u32 {
         self.get_threats().0.count_ones()
+    }
+
+    pub fn to_position_code(&self) -> BoardInteger {
+        BOTTOM_ROW + self.current.0 + self.current.0 + self.other.0
     }
 }
 
@@ -290,20 +308,6 @@ impl fmt::Display for Position {
             writeln!(f)?;
         }
         Ok(())
-    }
-}
-
-impl PositionCode {
-    pub fn new(p1: Bitboard, p2: Bitboard) -> PositionCode {
-        PositionCode(BOTTOM_ROW + p1.0 + p1.0 + p2.0)
-    }
-
-    pub fn from_integer(integer: BoardInteger) -> PositionCode {
-        PositionCode(integer)
-    }
-
-    pub fn to_integer(&self) -> BoardInteger {
-        self.0
     }
 }
 
@@ -416,5 +420,13 @@ mod tests {
         let position = Position::from_variation("43443555");
         assert_eq!(position.count_threats(), 2);
         assert_eq!(position.from_other_perspective().count_threats(), 0);
+    }
+
+    #[test]
+    fn position_code() {
+        let position1 = Position::from_variation("43443555");
+        let position_code = position1.to_position_code();
+        let position2 = Position::from_position_code(position_code);
+        assert_eq!(position1, position2);
     }
 }

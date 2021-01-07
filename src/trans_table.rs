@@ -1,7 +1,7 @@
 use num_traits::FromPrimitive;
 
 use crate::bitboard;
-use crate::bitboard::PositionCode;
+use crate::bitboard::Position;
 use crate::score::*;
 
 type Entry = bitboard::BoardInteger;
@@ -73,10 +73,10 @@ impl TransTable {
         }
     }
 
-    pub fn store(&mut self, position: PositionCode, score: Score, work: u32) {
-        let position_integer = position.to_integer();
-        let index: usize = (position_integer % self.table_size as Entry) as usize;
-        let key: Entry = position_integer / self.table_size as Entry;
+    pub fn store(&mut self, position: Position, score: Score, work: u32) {
+        let position_code = position.to_position_code();
+        let index: usize = (position_code % self.table_size as Entry) as usize;
+        let key: Entry = position_code / self.table_size as Entry;
 
         let new_entry: Entry =
             key | ((score as Entry) << self.key_bits) | ((work as Entry) << self.key_score_bits);
@@ -105,10 +105,10 @@ impl TransTable {
         self.slots[index] = slot;
     }
 
-    pub fn fetch(&self, position: PositionCode) -> Score {
-        let position_integer = position.to_integer();
-        let index: usize = (position_integer % self.table_size as u64) as usize;
-        let key: Entry = position_integer / self.table_size as Entry;
+    pub fn fetch(&self, position: Position) -> Score {
+        let position_code = position.to_position_code();
+        let index: usize = (position_code % self.table_size as u64) as usize;
+        let key: Entry = position_code / self.table_size as Entry;
 
         let slot = self.slots[index];
 
@@ -164,7 +164,7 @@ mod tests {
     fn remember_stored_value() {
         let mut tt = TransTable::new(1021);
 
-        let position = PositionCode::from_integer(1000);
+        let position = Position::from_variation("4444");
         tt.store(position, Score::Win, 0);
         assert_eq!(tt.stored_count, 1);
         assert_eq!(tt.fetch(position), Score::Win);
@@ -175,10 +175,11 @@ mod tests {
         let table_size = 1021;
         let mut tt = TransTable::new(table_size);
 
-        let pos1 = PositionCode::from_integer(table_size as BoardInteger);
-        let pos2 = PositionCode::from_integer(2 * table_size as BoardInteger);
-        let pos3 = PositionCode::from_integer(3 * table_size as BoardInteger);
-        let pos4 = PositionCode::from_integer(4 * table_size as BoardInteger);
+        let offset = Position::empty().to_position_code();
+        let pos1 = Position::from_position_code(offset + table_size as BoardInteger);
+        let pos2 = Position::from_position_code(offset + 2 * table_size as BoardInteger);
+        let pos3 = Position::from_position_code(offset + 3 * table_size as BoardInteger);
+        let pos4 = Position::from_position_code(offset + 4 * table_size as BoardInteger);
 
         tt.store(pos1, Score::Win, 300);
         tt.store(pos2, Score::Win, 600);
