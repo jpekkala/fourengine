@@ -164,7 +164,7 @@ impl Engine {
             let threats2 = b.new_position.from_other_perspective().count_threats();
             if threats1 != threats2 {
                 threats2.cmp(&threats1)
-            } else if a.y != b.y && a.new_position.get_ply() > 12 {
+            } else if a.y != b.y && a.new_position.get_ply() > 20 {
                 b.y.cmp(&a.y)
             } else {
                 self.heuristic
