@@ -16,8 +16,22 @@ pub const POSITION_BITS: u32 = (BOARD_HEIGHT + 1) * BOARD_WIDTH;
 /// bigger board sizes are used.
 pub type BoardInteger = u64;
 
+/// Represents the discs of a single player.
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Bitboard(pub BoardInteger);
+pub struct Bitboard(BoardInteger);
+
+/// Represents the board state of a particular position but not how the position was arrived at.
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct Position {
+    pub current: Bitboard,
+    pub other: Bitboard,
+}
+
+pub enum Disc {
+    White,
+    Red,
+    Empty,
+}
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 pub struct PositionCode(BoardInteger);
@@ -106,7 +120,7 @@ impl Bitboard {
         let diagonal1 = threat_line(board, BIT_HEIGHT + 1);
         let diagonal2 = threat_line(board, BIT_HEIGHT - 1);
 
-        vertical | horizontal | diagonal1 | diagonal2
+        (vertical | horizontal | diagonal1 | diagonal2) & FULL_BOARD
     }
 
     pub fn get_threat_board(&self, other: Bitboard) -> Bitboard {
@@ -115,19 +129,121 @@ impl Bitboard {
         Bitboard(threat_cells & empty_cells)
     }
 
-    pub fn has_immediate_win(&self, other: Bitboard) -> bool {
-        let threat_cells = self.get_threat_cells();
-        let height_cells = self.get_height_cells(other);
-        let immediate_threats = threat_cells & height_cells;
-        if immediate_threats.count_ones() > 1 {
-            return true;
-        }
-        let double_threats = immediate_threats & (threat_cells >> 1);
-        return double_threats != 0;
-    }
-
     pub fn count_threats(&self, other: Bitboard) -> u32 {
         self.get_threat_board(other).0.count_ones()
+    }
+}
+
+#[inline]
+fn threat_line(board: BoardInteger, shift_amount: u32) -> BoardInteger {
+    let right_helper = (board >> shift_amount) & (board >> 2 * shift_amount);
+    let right_triple = right_helper & (board >> 3 * shift_amount);
+    let right_hole = right_helper & (board << shift_amount);
+
+    let left_helper = (board << shift_amount) & (board << 2 * shift_amount);
+    let left_triple = left_helper & (board << 3 * shift_amount);
+    let left_hole = left_helper & (board >> shift_amount);
+
+    right_triple | right_hole | left_triple | left_hole
+}
+
+impl Position {
+    pub fn empty() -> Position {
+        Position {
+            current: Bitboard::empty(),
+            other: Bitboard::empty(),
+        }
+    }
+
+    pub fn from_variation(variation: &str) -> Position {
+        let mut position = Position::empty();
+        for ch in variation.trim().chars() {
+            let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
+            position = position.drop(column).expect("Invalid move");
+        }
+        position
+    }
+
+    pub fn drop(&self, column: u32) -> Option<Position> {
+        let new_board = self.current.drop(self.other, column);
+        if !new_board.is_legal() {
+            return None;
+        }
+        Some(Position {
+            current: self.other,
+            other: new_board,
+        })
+    }
+
+    pub fn has_won(&self) -> bool {
+        return self.current.has_won() || self.other.has_won();
+    }
+
+    fn get_ordered_boards(&self) -> (Bitboard, Bitboard) {
+        let white_moves = self.get_ply() % 2 == 0;
+        let white_board = if white_moves {
+            self.current
+        } else {
+            self.other
+        };
+        let red_board = if white_moves {
+            self.other
+        } else {
+            self.current
+        };
+
+        (white_board, red_board)
+    }
+
+    pub fn get_disc_at(&self, x: u32, y: u32) -> Disc {
+        let (white_board, red_board) = self.get_ordered_boards();
+
+        if white_board.has_disc(x, y) {
+            Disc::White
+        } else if red_board.has_disc(x, y) {
+            Disc::Red
+        } else {
+            Disc::Empty
+        }
+    }
+
+    pub fn to_position_code(&self) -> PositionCode {
+        PositionCode::new(self.current, self.other)
+    }
+
+    pub fn get_height(&self, column: u32) -> u32 {
+        self.current.get_height(self.other, column)
+    }
+
+    pub fn normalize(&self) -> (Position, bool) {
+        let flipped_current = self.current.flip();
+        let flipped_other = self.other.flip();
+        let code1 = PositionCode::new(self.current, self.other);
+        let code2 = PositionCode::new(flipped_current, flipped_other);
+        let symmetric = code1 == code2;
+        if code1 < code2 {
+            (
+                Position {
+                    current: flipped_current,
+                    other: flipped_other,
+                },
+                symmetric,
+            )
+        } else {
+            (*self, symmetric)
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn flip(&self) -> Position {
+        Position {
+            current: self.current.flip(),
+            other: self.other.flip(),
+        }
+    }
+
+    pub fn get_ply(&self) -> u32 {
+        (self.current.0 | self.other.0).count_ones()
     }
 }
 
@@ -147,17 +263,20 @@ impl fmt::Display for Bitboard {
     }
 }
 
-#[inline]
-fn threat_line(board: BoardInteger, shift_amount: u32) -> BoardInteger {
-    let right_helper = (board >> shift_amount) & (board >> 2 * shift_amount);
-    let right_triple = right_helper & (board >> 3 * shift_amount);
-    let right_hole = right_helper & (board << shift_amount);
-
-    let left_helper = (board << shift_amount) & (board << 2 * shift_amount);
-    let left_triple = left_helper & (board << 3 * shift_amount);
-    let left_hole = left_helper & (board >> shift_amount);
-
-    right_triple | right_hole | left_triple | left_hole
+impl fmt::Display for Position {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for y in (0..BOARD_HEIGHT).rev() {
+            for x in 0..BOARD_WIDTH {
+                match self.get_disc_at(x, y) {
+                    Disc::White => write!(f, "X")?,
+                    Disc::Red => write!(f, "O")?,
+                    Disc::Empty => write!(f, ".")?,
+                }
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
 }
 
 impl PositionCode {
@@ -171,5 +290,116 @@ impl PositionCode {
 
     pub fn to_integer(&self) -> BoardInteger {
         self.0
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn draw_from_variation() {
+        let position = Position::from_variation("444444");
+        let expected = "\
+             ...O...\n\
+             ...X...\n\
+             ...O...\n\
+             ...X...\n\
+             ...O...\n\
+             ...X...\n";
+        assert_eq!(position.to_string(), expected);
+
+        let position = Position::from_variation("436675553");
+        let expected = "\
+             .......\n\
+             .......\n\
+             .......\n\
+             ....O..\n\
+             ..X.XO.\n\
+             ..OXOXX\n";
+        assert_eq!(position.to_string(), expected);
+    }
+
+    #[test]
+    fn height() {
+        let position = Position::from_variation("436675553");
+        assert_eq!(position.get_height(0), 0);
+        assert_eq!(position.get_height(1), 0);
+        assert_eq!(position.get_height(2), 2);
+        assert_eq!(position.get_height(3), 1);
+        assert_eq!(position.get_height(4), 3);
+        assert_eq!(position.get_height(5), 2);
+        assert_eq!(position.get_height(6), 1);
+    }
+
+    #[test]
+    fn flip() {
+        let position = Position::from_variation("436675553");
+        let expected = "\
+             .......\n\
+             .......\n\
+             .......\n\
+             ....O..\n\
+             ..X.XO.\n\
+             ..OXOXX\n";
+        assert_eq!(position.to_string(), expected);
+
+        let flipped = position.flip();
+        let expected = "\
+             .......\n\
+             .......\n\
+             .......\n\
+             ..O....\n\
+             .OX.X..\n\
+             XXOXO..\n";
+    }
+
+    #[test]
+    fn invalid_move() {
+        let position = Position::from_variation("444444");
+        assert!(position.drop(3).is_none());
+        assert!(position.drop(0).is_some());
+    }
+
+    #[test]
+    fn win_checking() {
+        // horizontal
+        {
+            let position = Position::from_variation("4455667");
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+        }
+
+        // vertical
+        {
+            let position = Position::from_variation("4343434");
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+        }
+
+        // slash (/)
+        {
+            let position = Position::from_variation("45567667677");
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+        }
+
+        // backslash (\)
+        {
+            let position = Position::from_variation("76654554544");
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+        }
+    }
+
+    #[test]
+    fn threat_counting() {
+        let position = Position::from_variation("43443555");
+        assert_eq!(position.current.count_threats(position.other), 2);
+        assert_eq!(position.other.count_threats(position.current), 0);
     }
 }

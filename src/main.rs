@@ -1,5 +1,5 @@
 use crate::engine::Engine;
-use crate::position::Position;
+use crate::bitboard::Position;
 use crate::score::Score;
 use clap::{App, Arg};
 use std::fs::File;
@@ -10,7 +10,6 @@ use std::{io};
 mod bitboard;
 mod engine;
 mod heuristic;
-mod position;
 mod score;
 mod trans_table;
 

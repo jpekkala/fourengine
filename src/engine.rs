@@ -1,6 +1,5 @@
-use crate::bitboard::{Bitboard, BOARD_HEIGHT, BOARD_WIDTH};
+use crate::bitboard::{Bitboard, Position, BOARD_HEIGHT, BOARD_WIDTH};
 use crate::heuristic::{FixedHeuristic, Heuristic};
-use crate::position::Position;
 use crate::score::Score;
 use crate::trans_table::TransTable;
 
