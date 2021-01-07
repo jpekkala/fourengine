@@ -94,19 +94,12 @@ impl Engine {
             return Score::Unknown;
         }
 
-        if self.work_count % 1_000_000 == 0 {
-            //println!("{}", self.position);
-        }
-
-        let (normalized_position, symmetric) = self.position.normalize();
-        self.position = normalized_position;
-
         let mut best_score = Score::Loss;
         let mut new_alpha = alpha;
         let mut new_beta = beta;
 
         let immediate_enemy_threats = self.position.from_other_perspective().get_immediate_threats();
-        let nonlosing_moves = self.position.get_nonlosing_moves();
+        let mut nonlosing_moves = self.position.get_nonlosing_moves();
 
         let forced_move_count = immediate_enemy_threats.0.count_ones();
         if forced_move_count > 1 {
@@ -127,6 +120,15 @@ impl Engine {
             return score;
         }
 
+        if nonlosing_moves.0 == 0 {
+            return Score::Loss;
+        }
+
+        let (position_code, symmetric) = self.position.to_normalized_position_code();
+        if symmetric {
+            nonlosing_moves = nonlosing_moves.get_left_half();
+        }
+
         let mut possible_moves = Vec::new();
         for x in 0..BOARD_WIDTH {
             let column = (nonlosing_moves.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
@@ -134,15 +136,8 @@ impl Engine {
                 possible_moves.push(Move::new(&self.position, x));
             }
         }
-        if possible_moves.len() == 0 {
-            return Score::Loss;
-        }
 
-        if symmetric {
-            possible_moves.retain(|m| m.x <= BOARD_WIDTH / 2);
-        }
-
-        let trans_score = self.trans_table.fetch(&self.position);
+        let trans_score = self.trans_table.fetch(position_code);
         if trans_score.is_exact() {
             return trans_score;
         }
@@ -234,7 +229,7 @@ impl Engine {
         }
 
         self.trans_table
-            .store(&self.position, best_score, work as u32);
+            .store(position_code, best_score, work as u32);
         best_score
     }
 }

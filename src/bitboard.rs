@@ -41,6 +41,10 @@ pub const FIRST_COLUMN: BoardInteger = (1 << BIT_HEIGHT) - 1;
 const BOTTOM_ROW: BoardInteger = ALL_BITS / FIRST_COLUMN;
 const TOP_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
 const FULL_BOARD: BoardInteger = ALL_BITS ^ TOP_ROW;
+const LEFT_HALF: BoardInteger = FIRST_COLUMN |
+    (FIRST_COLUMN << BIT_HEIGHT) |
+    (FIRST_COLUMN << 2 * BIT_HEIGHT) |
+    (FIRST_COLUMN << 3 * BIT_HEIGHT);
 
 impl Bitboard {
     pub fn empty() -> Bitboard {
@@ -98,6 +102,10 @@ impl Bitboard {
         let diagonal2 = threat_line(board, BIT_HEIGHT - 1);
 
         (vertical | horizontal | diagonal1 | diagonal2) & FULL_BOARD
+    }
+
+    pub fn get_left_half(&self) -> Bitboard {
+        Bitboard(self.0 & LEFT_HALF)
     }
 }
 
@@ -281,6 +289,18 @@ impl Position {
 
     pub fn to_position_code(&self) -> BoardInteger {
         BOTTOM_ROW + self.current.0 + self.current.0 + self.other.0
+    }
+
+    pub fn to_normalized_position_code(&self) -> (BoardInteger, bool) {
+        let flipped = self.flip();
+        let code1 = self.to_position_code();
+        let code2 = flipped.to_position_code();
+        let symmetric = code1 == code2;
+        if code1 < code2 {
+            (code1, symmetric)
+        } else {
+            (code2, symmetric)
+        }
     }
 
     pub fn get_nonlosing_moves(&self) -> Bitboard {
