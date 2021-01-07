@@ -17,7 +17,6 @@ struct Move {
     x: u32,
     y: u32,
     new_position: Position,
-    old_board: Bitboard,
 }
 
 impl Move {
@@ -26,28 +25,7 @@ impl Move {
             x: column,
             y: position.get_height(column),
             new_position: Position::new(position.other, position.drop(column)),
-            old_board: position.current,
         }
-    }
-
-    pub fn is_legal(&self) -> bool {
-        self.new_position.other.is_legal()
-    }
-
-    pub fn has_won(&self) -> bool {
-        self.new_position.other.has_won()
-    }
-
-    pub fn is_forced_move(&self) -> bool {
-        let hypothetical_position = Position::new(self.new_position.current, self.old_board);
-        // must be legal for the opponent if it was legal for the current player
-        hypothetical_position.drop(self.x).has_won()
-    }
-
-    pub fn has_enemy_threat_above(&self) -> bool {
-        let hypothetical_position = Position::new(self.new_position.current, self.new_position.other);
-        let enemy_board = hypothetical_position.drop(self.x);
-        enemy_board.is_legal() & enemy_board.has_won()
     }
 }
 
@@ -73,8 +51,9 @@ impl Engine {
     }
 
     pub fn solve(&mut self) -> Score {
-        for m in get_possible_moves(&self.position) {
-            if m.has_won() {
+        for x in 0..BOARD_WIDTH {
+            let board = self.position.drop(x);
+            if board.is_legal() && board.has_won() {
                 return Score::Win;
             }
         }
@@ -232,15 +211,4 @@ impl Engine {
             .store(position_code, best_score, work as u32);
         best_score
     }
-}
-
-fn get_possible_moves(position: &Position) -> Vec<Move> {
-    let mut possible_moves = Vec::new();
-    for column in 0..BOARD_WIDTH {
-        let m = Move::new(position, column);
-        if m.is_legal() {
-            possible_moves.push(m)
-        }
-    }
-    possible_moves
 }
