@@ -16,9 +16,8 @@ struct Move {
     /// The column where the disc is dropped
     x: u32,
     y: u32,
+    new_position: Position,
     old_board: Bitboard,
-    new_board: Bitboard,
-    enemy_board: Bitboard,
 }
 
 impl Move {
@@ -26,27 +25,28 @@ impl Move {
         Move {
             x: column,
             y: position.get_height(column),
+            new_position: Position::new(position.other, position.drop(column)),
             old_board: position.current,
-            new_board: position.current.drop(position.other, column),
-            enemy_board: position.other,
         }
     }
 
     pub fn is_legal(&self) -> bool {
-        self.new_board.is_legal()
+        self.new_position.other.is_legal()
     }
 
     pub fn has_won(&self) -> bool {
-        self.new_board.has_won()
+        self.new_position.other.has_won()
     }
 
     pub fn is_forced_move(&self) -> bool {
+        let hypothetical_position = Position::new(self.new_position.current, self.old_board);
         // must be legal for the opponent if it was legal for the current player
-        self.enemy_board.drop(self.old_board, self.x).has_won()
+        hypothetical_position.drop(self.x).has_won()
     }
 
     pub fn has_enemy_threat_above(&self) -> bool {
-        let enemy_board = self.enemy_board.drop(self.new_board, self.x);
+        let hypothetical_position = Position::new(self.new_position.current, self.new_position.other);
+        let enemy_board = hypothetical_position.drop(self.x);
         enemy_board.is_legal() & enemy_board.has_won()
     }
 }
@@ -124,7 +124,7 @@ impl Engine {
 
         if let Some(m) = forced_move {
             let old_position = self.position;
-            self.position = old_position.drop(m.x).unwrap();
+            self.position = old_position.position_after_drop(m.x).unwrap();
             self.ply += 1;
             let score = self.negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
                 .flip();
@@ -161,8 +161,8 @@ impl Engine {
         }
 
         possible_moves.sort_by(|a, b| {
-            let threats1 = a.new_board.count_threats(a.enemy_board);
-            let threats2 = b.new_board.count_threats(b.enemy_board);
+            let threats1 = a.new_position.change_perspective().count_threats();
+            let threats2 = b.new_position.change_perspective().count_threats();
             if threats1 == threats2 {
                 self.heuristic
                     .get_value(b.x, b.y)
@@ -178,7 +178,7 @@ impl Engine {
         // alpha-beta cutoffs and depth limits.
         let mut unknown_count = possible_moves.len();
         for (index, m) in possible_moves.iter().enumerate() {
-            self.position = old_position.drop(m.x).unwrap();
+            self.position = old_position.position_after_drop(m.x).unwrap();
             self.ply += 1;
 
             let score = self

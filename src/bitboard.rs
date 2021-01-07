@@ -71,26 +71,6 @@ impl Bitboard {
         result != 0
     }
 
-    fn get_height_bit(&self, other: Bitboard, column: u32) -> BoardInteger {
-        let column_mask = FIRST_COLUMN << (BIT_HEIGHT * column);
-        let both = (self.0 | other.0) + BOTTOM_ROW;
-        both & column_mask
-    }
-
-    pub fn get_height(&self, other: Bitboard, column: u32) -> u32 {
-        let both = self.0 | other.0;
-        ((both >> (BIT_HEIGHT * column)) + 1).trailing_zeros()
-    }
-
-    fn get_height_cells(&self, other: Bitboard) -> BoardInteger {
-        (self.0 | other.0) + BOTTOM_ROW
-    }
-
-    pub fn drop(&self, other: Bitboard, column: u32) -> Bitboard {
-        let bit = self.get_height_bit(other, column);
-        Bitboard(self.0 | bit)
-    }
-
     pub fn is_legal(&self) -> bool {
         (TOP_ROW & self.0) == 0
     }
@@ -122,16 +102,6 @@ impl Bitboard {
 
         (vertical | horizontal | diagonal1 | diagonal2) & FULL_BOARD
     }
-
-    pub fn get_threat_board(&self, other: Bitboard) -> Bitboard {
-        let threat_cells =  self.get_threat_cells();
-        let empty_cells = FULL_BOARD ^ (self.0 | other.0);
-        Bitboard(threat_cells & empty_cells)
-    }
-
-    pub fn count_threats(&self, other: Bitboard) -> u32 {
-        self.get_threat_board(other).0.count_ones()
-    }
 }
 
 #[inline]
@@ -155,17 +125,55 @@ impl Position {
         }
     }
 
+    pub fn new(current: Bitboard, other: Bitboard) -> Position {
+        Position {
+            current,
+            other,
+        }
+    }
+
     pub fn from_variation(variation: &str) -> Position {
         let mut position = Position::empty();
         for ch in variation.trim().chars() {
             let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
-            position = position.drop(column).expect("Invalid move");
+            position = position.position_after_drop(column).expect("Invalid move");
         }
         position
     }
 
-    pub fn drop(&self, column: u32) -> Option<Position> {
-        let new_board = self.current.drop(self.other, column);
+    pub fn change_perspective(&self) -> Position {
+        Position {
+            current: self.other,
+            other: self.current,
+        }
+    }
+
+    fn both(&self) -> BoardInteger {
+        self.current.0 | self.other.0
+    }
+
+    fn get_height_bit(&self, column: u32) -> BoardInteger {
+        let column_mask = FIRST_COLUMN << (BIT_HEIGHT * column);
+        let both = self.both() + BOTTOM_ROW;
+        both & column_mask
+    }
+
+    pub fn get_height(&self, column: u32) -> u32 {
+        let both = self.both();
+        ((both >> (BIT_HEIGHT * column)) + 1).trailing_zeros()
+    }
+
+    fn get_height_cells(&self) -> BoardInteger {
+        self.both() + BOTTOM_ROW
+    }
+
+    pub fn drop(&self, column: u32) -> Bitboard {
+        let bit = self.get_height_bit(column);
+        Bitboard(self.current.0 | bit)
+    }
+
+    pub fn position_after_drop(&self, column: u32) -> Option<Position> {
+        let new_board = self.drop(column);
         if !new_board.is_legal() {
             return None;
         }
@@ -211,10 +219,6 @@ impl Position {
         PositionCode::new(self.current, self.other)
     }
 
-    pub fn get_height(&self, column: u32) -> u32 {
-        self.current.get_height(self.other, column)
-    }
-
     pub fn normalize(&self) -> (Position, bool) {
         let flipped_current = self.current.flip();
         let flipped_other = self.other.flip();
@@ -244,6 +248,16 @@ impl Position {
 
     pub fn get_ply(&self) -> u32 {
         (self.current.0 | self.other.0).count_ones()
+    }
+
+    pub fn get_threats(&self) -> Bitboard {
+        let threat_cells =  self.current.get_threat_cells();
+        let empty_cells = FULL_BOARD ^ self.both();
+        Bitboard(threat_cells & empty_cells)
+    }
+
+    pub fn count_threats(&self) -> u32 {
+        self.get_threats().0.count_ones()
     }
 }
 
