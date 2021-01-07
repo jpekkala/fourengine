@@ -46,6 +46,25 @@ const LEFT_HALF: BoardInteger = FIRST_COLUMN |
     (FIRST_COLUMN << 2 * BIT_HEIGHT) |
     (FIRST_COLUMN << 3 * BIT_HEIGHT);
 
+const ODD_ROWS: BoardInteger = BOTTOM_ROW * 0b010101;
+const EVEN_ROWS: BoardInteger = BOTTOM_ROW * 0b101010;
+
+const VERTICAL_LINE: BoardInteger = 0b1111;
+const HORIZONTAL_LINE: BoardInteger = 1 |
+    (1 << BIT_HEIGHT) |
+    (1 << 2 * BIT_HEIGHT) |
+    (1 << 3 * BIT_HEIGHT);
+const SLASH_LINE: BoardInteger = 1 |
+    (1 << (BIT_HEIGHT + 1)) |
+    (1 << (2 * BIT_HEIGHT + 2)) |
+    (1 << (3 * BIT_HEIGHT + 3));
+const BACKSLASH_LINE: BoardInteger = 1 |
+    (1 << (BIT_HEIGHT - 1)) |
+    (1 << (2 * BIT_HEIGHT - 2)) |
+    (1 << (3 * BIT_HEIGHT - 3));
+
+// const SLASH_LINE: BoardInteger = 1 | (BIT_HEIGHT + 2) | (2 * BIT_HEIGHT + 3) | (3 * BIT_HEIGHT + 4);
+
 impl Bitboard {
     pub fn empty() -> Bitboard {
         Bitboard(0)
@@ -60,8 +79,8 @@ impl Bitboard {
         let vertical = board & (board >> 1);
         let horizontal = board & (board >> BIT_HEIGHT);
 
-        const SLASH_SHIFT: u32 = BIT_HEIGHT - 1;
-        const BACKSLASH_SHIFT: u32 = BIT_HEIGHT + 1;
+        const SLASH_SHIFT: u32 = BIT_HEIGHT + 1;
+        const BACKSLASH_SHIFT: u32 = BIT_HEIGHT - 1;
         let slash = board & (board >> SLASH_SHIFT);
         let backslash = board & (board >> BACKSLASH_SHIFT);
 
@@ -69,7 +88,24 @@ impl Bitboard {
             | (horizontal & (horizontal >> 2 * BIT_HEIGHT))
             | (slash & (slash >> 2 * SLASH_SHIFT))
             | (backslash & (backslash >> 2 * BACKSLASH_SHIFT));
+
         result != 0
+    }
+
+    fn get_won_cells(&self) -> BoardInteger {
+        let board = self.0;
+        let vertical = board & (board >> 1);
+        let horizontal = board & (board >> BIT_HEIGHT);
+
+        const SLASH_SHIFT: u32 = BIT_HEIGHT + 1;
+        const BACKSLASH_SHIFT: u32 = BIT_HEIGHT - 1;
+        let slash = board & (board >> SLASH_SHIFT);
+        let backslash = board & (board >> BACKSLASH_SHIFT);
+
+        (vertical & (vertical >> 2)) * VERTICAL_LINE
+            | (horizontal & (horizontal >> 2 * BIT_HEIGHT)) * HORIZONTAL_LINE
+            | (slash & (slash >> 2 * SLASH_SHIFT)) * SLASH_LINE
+            | (backslash & (backslash >> 2 * BACKSLASH_SHIFT)) * BACKSLASH_LINE
     }
 
     pub fn is_legal(&self) -> bool {
@@ -106,6 +142,10 @@ impl Bitboard {
 
     pub fn get_left_half(&self) -> Bitboard {
         Bitboard(self.0 & LEFT_HALF)
+    }
+
+    fn get_column(&self, x: u32) -> BoardInteger {
+        (self.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN
     }
 }
 
@@ -308,6 +348,19 @@ impl Position {
         let enemy_threats = self.from_other_perspective().get_threats();
         Bitboard(!(enemy_threats.0 >> 1) & possible_moves)
     }
+
+    pub fn all_colums_even(&self) -> bool {
+        let both = self.both();
+        for x in 0..BOARD_WIDTH {
+            let column = (both >> x * BIT_HEIGHT) & FIRST_COLUMN;
+            if (column + 1).trailing_zeros() % 2 != 0 {
+                return false;
+            }
+        }
+        true
+    }
+
+
 }
 
 impl fmt::Display for Bitboard {
@@ -419,6 +472,14 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
+            let expected = "\
+             0000000\n\
+             0000000\n\
+             0000000\n\
+             0000000\n\
+             0000000\n\
+             0001111\n";
+            assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
         }
 
         // vertical
@@ -427,6 +488,14 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
+            let expected = "\
+             0000000\n\
+             0000000\n\
+             0001000\n\
+             0001000\n\
+             0001000\n\
+             0001000\n";
+            assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
         }
 
         // slash (/)
@@ -435,6 +504,14 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
+            let expected = "\
+             0000000\n\
+             0000000\n\
+             0000001\n\
+             0000010\n\
+             0000100\n\
+             0001000\n";
+            assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
         }
 
         // backslash (\)
@@ -443,6 +520,14 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
+            let expected = "\
+             0000000\n\
+             0000000\n\
+             0001000\n\
+             0000100\n\
+             0000010\n\
+             0000001\n";
+            assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
         }
     }
 
@@ -459,5 +544,11 @@ mod tests {
         let position_code = position1.to_position_code();
         let position2 = Position::from_position_code(position_code);
         assert_eq!(position1, position2);
+    }
+
+    #[test]
+    fn even_columns() {
+        let position = Position::from_variation("4455");
+        assert!(position.all_colums_even());
     }
 }
