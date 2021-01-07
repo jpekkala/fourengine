@@ -141,7 +141,7 @@ impl Position {
         position
     }
 
-    pub fn change_perspective(&self) -> Position {
+    pub fn from_other_perspective(&self) -> Position {
         Position {
             current: self.other,
             other: self.current,
@@ -366,13 +366,14 @@ mod tests {
              ..O....\n\
              .OX.X..\n\
              XXOXO..\n";
+        assert_eq!(flipped.to_string(), expected);
     }
 
     #[test]
     fn invalid_move() {
         let position = Position::from_variation("444444");
-        assert!(position.drop(3).is_none());
-        assert!(position.drop(0).is_some());
+        assert!(position.position_after_drop(3).is_none());
+        assert!(position.position_after_drop(0).is_some());
     }
 
     #[test]
@@ -413,7 +414,7 @@ mod tests {
     #[test]
     fn threat_counting() {
         let position = Position::from_variation("43443555");
-        assert_eq!(position.current.count_threats(position.other), 2);
-        assert_eq!(position.other.count_threats(position.current), 0);
+        assert_eq!(position.count_threats(), 2);
+        assert_eq!(position.from_other_perspective().count_threats(), 0);
     }
 }

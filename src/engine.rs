@@ -161,8 +161,8 @@ impl Engine {
         }
 
         possible_moves.sort_by(|a, b| {
-            let threats1 = a.new_position.change_perspective().count_threats();
-            let threats2 = b.new_position.change_perspective().count_threats();
+            let threats1 = a.new_position.from_other_perspective().count_threats();
+            let threats2 = b.new_position.from_other_perspective().count_threats();
             if threats1 == threats2 {
                 self.heuristic
                     .get_value(b.x, b.y)
