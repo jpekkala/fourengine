@@ -1,4 +1,4 @@
-use crate::bitboard::{Bitboard, Position, BOARD_HEIGHT, BOARD_WIDTH};
+use crate::bitboard::{Bitboard, Position, BOARD_HEIGHT, BOARD_WIDTH, BIT_HEIGHT, FIRST_COLUMN};
 use crate::heuristic::{FixedHeuristic, Heuristic};
 use crate::score::Score;
 use crate::trans_table::TransTable;
@@ -105,25 +105,20 @@ impl Engine {
         let mut new_alpha = alpha;
         let mut new_beta = beta;
 
-        let mut possible_moves = get_possible_moves(&self.position);
+        let immediate_enemy_threats = self.position.from_other_perspective().get_immediate_threats();
+        let nonlosing_moves = self.position.get_nonlosing_moves();
 
-        let mut forced_move = None;
-        for m in &possible_moves {
-            if m.is_forced_move() {
-                if forced_move.is_some() {
-                    // double threat
-                    return Score::Loss;
-                }
-                if m.has_enemy_threat_above() {
-                    return Score::Loss;
-                }
-                forced_move = Some(m);
+        let forced_move_count = immediate_enemy_threats.0.count_ones();
+        if forced_move_count > 1 {
+            return Score::Loss;
+        } else if forced_move_count == 1 {
+            if immediate_enemy_threats.0 & nonlosing_moves.0 == 0 {
+                return Score::Loss;
             }
-        }
 
-        if let Some(m) = forced_move {
             let old_position = self.position;
-            self.position = old_position.position_after_drop(m.x).unwrap();
+            let new_board = Bitboard(old_position.current.0 | immediate_enemy_threats.0);
+            self.position = Position::new(old_position.other, new_board);
             self.ply += 1;
             let score = self.negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
                 .flip();
@@ -132,13 +127,19 @@ impl Engine {
             return score;
         }
 
-        if symmetric {
-            possible_moves.retain(|m| m.x <= BOARD_WIDTH / 2);
+        let mut possible_moves = Vec::new();
+        for x in 0..BOARD_WIDTH {
+            let column = (nonlosing_moves.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
+            if column != 0 {
+                possible_moves.push(Move::new(&self.position, x));
+            }
+        }
+        if possible_moves.len() == 0 {
+            return Score::Loss;
         }
 
-        possible_moves.retain(|m| !m.has_enemy_threat_above());
-        if possible_moves.is_empty() {
-            return Score::Loss;
+        if symmetric {
+            possible_moves.retain(|m| m.x <= BOARD_WIDTH / 2);
         }
 
         let trans_score = self.trans_table.fetch(&self.position);

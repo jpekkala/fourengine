@@ -18,7 +18,7 @@ pub type BoardInteger = u64;
 
 /// Represents the discs of a single player.
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Bitboard(BoardInteger);
+pub struct Bitboard(pub BoardInteger);
 
 /// Represents the board state of a particular position but not how the position was arrived at.
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -37,7 +37,7 @@ pub enum Disc {
 pub const BIT_HEIGHT: u32 = BOARD_HEIGHT + 1;
 
 const ALL_BITS: BoardInteger = (1 << (BIT_HEIGHT * BOARD_WIDTH)) - 1;
-const FIRST_COLUMN: BoardInteger = (1 << BIT_HEIGHT) - 1;
+pub const FIRST_COLUMN: BoardInteger = (1 << BIT_HEIGHT) - 1;
 const BOTTOM_ROW: BoardInteger = ALL_BITS / FIRST_COLUMN;
 const TOP_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
 const FULL_BOARD: BoardInteger = ALL_BITS ^ TOP_ROW;
@@ -270,12 +270,23 @@ impl Position {
         Bitboard(threat_cells & empty_cells)
     }
 
+    pub fn get_immediate_threats(&self) -> Bitboard {
+        let threat_cells =  self.current.get_threat_cells();
+        Bitboard(threat_cells & self.get_height_cells())
+    }
+
     pub fn count_threats(&self) -> u32 {
         self.get_threats().0.count_ones()
     }
 
     pub fn to_position_code(&self) -> BoardInteger {
         BOTTOM_ROW + self.current.0 + self.current.0 + self.other.0
+    }
+
+    pub fn get_nonlosing_moves(&self) -> Bitboard {
+        let possible_moves = self.get_height_cells() & FULL_BOARD;
+        let enemy_threats = self.from_other_perspective().get_threats();
+        Bitboard(!(enemy_threats.0 >> 1) & possible_moves)
     }
 }
 
