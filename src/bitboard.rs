@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+use std::fmt;
+use std::fmt::Formatter;
+
 /// board dimensions
 pub const BOARD_WIDTH: u32 = 7;
 pub const BOARD_HEIGHT: u32 = 6;
@@ -14,7 +17,7 @@ pub const POSITION_BITS: u32 = (BOARD_HEIGHT + 1) * BOARD_WIDTH;
 pub type BoardInteger = u64;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
-pub struct Bitboard(BoardInteger);
+pub struct Bitboard(pub BoardInteger);
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug)]
 pub struct PositionCode(BoardInteger);
@@ -65,6 +68,10 @@ impl Bitboard {
         ((both >> (BIT_HEIGHT * column)) + 1).trailing_zeros()
     }
 
+    fn get_height_cells(&self, other: Bitboard) -> BoardInteger {
+        (self.0 | other.0) + BOTTOM_ROW
+    }
+
     pub fn drop(&self, other: Bitboard, column: u32) -> Bitboard {
         let bit = self.get_height_bit(other, column);
         Bitboard(self.0 | bit)
@@ -89,22 +96,54 @@ impl Bitboard {
         Bitboard(mirror)
     }
 
-    fn get_threat_board(&self, other: Bitboard) -> BoardInteger {
+    /// Returns the cells where a four-in-line would be created if the player had a disc there.
+    /// NOTE: This does not check if the other player already has a disc in the cell.
+    fn get_threat_cells(&self) -> BoardInteger {
         let board = self.0;
 
         let vertical = (board << 1) & (board << 2) & (board << 3);
         let horizontal = threat_line(board, BIT_HEIGHT);
         let diagonal1 = threat_line(board, BIT_HEIGHT + 1);
-        let diagonal2 = threat_line(board, BIT_HEIGHT + 2);
+        let diagonal2 = threat_line(board, BIT_HEIGHT - 1);
 
-        let all_threats = vertical | horizontal | diagonal1 | diagonal2;
+        vertical | horizontal | diagonal1 | diagonal2
+    }
 
-        all_threats & (FULL_BOARD ^ other.0)
+    pub fn get_threat_board(&self, other: Bitboard) -> Bitboard {
+        let threat_cells =  self.get_threat_cells();
+        let empty_cells = FULL_BOARD ^ (self.0 | other.0);
+        Bitboard(threat_cells & empty_cells)
+    }
+
+    pub fn has_immediate_win(&self, other: Bitboard) -> bool {
+        let threat_cells = self.get_threat_cells();
+        let height_cells = self.get_height_cells(other);
+        let immediate_threats = threat_cells & height_cells;
+        if immediate_threats.count_ones() > 1 {
+            return true;
+        }
+        let double_threats = immediate_threats & (threat_cells >> 1);
+        return double_threats != 0;
     }
 
     pub fn count_threats(&self, other: Bitboard) -> u32 {
-        let threat_board = self.get_threat_board(other);
-        threat_board.count_ones()
+        self.get_threat_board(other).0.count_ones()
+    }
+}
+
+impl fmt::Display for Bitboard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for y in (0..BOARD_HEIGHT).rev() {
+            for x in 0..BOARD_WIDTH {
+                if self.has_disc(x, y) {
+                    write!(f, "1")?;
+                } else {
+                    write!(f, "0")?
+                }
+            }
+            writeln!(f)?;
+        }
+        Ok(())
     }
 }
 
