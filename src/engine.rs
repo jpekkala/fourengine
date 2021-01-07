@@ -9,6 +9,7 @@ pub struct Engine {
     trans_table: TransTable,
     pub work_count: usize,
     pub heuristic: FixedHeuristic,
+    ply: u32,
 }
 
 #[derive(Clone)]
@@ -58,6 +59,7 @@ impl Engine {
             trans_table: TransTable::new(67108859),
             work_count: 0,
             heuristic: FixedHeuristic {},
+            ply: 0,
         }
     }
 
@@ -68,6 +70,7 @@ impl Engine {
 
     pub fn set_position(&mut self, position: Position) {
         self.position = position;
+        self.ply = position.get_ply();
     }
 
     pub fn solve(&mut self) -> Score {
@@ -84,7 +87,7 @@ impl Engine {
 
         self.work_count += 1;
 
-        if self.position.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
+        if self.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
             return Score::Draw;
         }
 
@@ -104,7 +107,6 @@ impl Engine {
         let mut new_beta = beta;
 
         let position = self.position.to_position_code();
-
         let mut possible_moves = get_possible_moves(&self.position);
 
         let mut forced_move = None;
@@ -124,8 +126,10 @@ impl Engine {
         if let Some(m) = forced_move {
             let old_position = self.position;
             self.position = old_position.drop(m.x).unwrap();
+            self.ply += 1;
             let score = self.negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
                 .flip();
+            self.ply -= 1;
             self.position = old_position;
             return score;
         }
@@ -176,10 +180,13 @@ impl Engine {
         let mut unknown_count = possible_moves.len();
         for (index, m) in possible_moves.iter().enumerate() {
             self.position = old_position.drop(m.x).unwrap();
+            self.ply += 1;
 
             let score = self
                 .negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
                 .flip();
+
+            self.ply -= 1;
 
             if score != Score::Unknown {
                 unknown_count -= 1;

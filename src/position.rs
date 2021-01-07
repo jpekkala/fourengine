@@ -7,8 +7,6 @@ use std::fmt::Formatter;
 /// Contains the same information as PositionCode but in a format that is easier to manipulate.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Position {
-    pub ply: u32,
-
     pub current: Bitboard,
     pub other: Bitboard,
 }
@@ -22,7 +20,6 @@ pub enum Disc {
 impl Position {
     pub fn empty() -> Position {
         Position {
-            ply: 0,
             current: Bitboard::empty(),
             other: Bitboard::empty(),
         }
@@ -45,7 +42,6 @@ impl Position {
         Some(Position {
             current: self.other,
             other: new_board,
-            ply: self.ply + 1,
         })
     }
 
@@ -54,7 +50,7 @@ impl Position {
     }
 
     fn get_ordered_boards(&self) -> (Bitboard, Bitboard) {
-        let white_moves = self.ply % 2 == 0;
+        let white_moves = self.get_ply() % 2 == 0;
         let white_board = if white_moves {
             self.current
         } else {
@@ -98,7 +94,6 @@ impl Position {
         if code1 < code2 {
             (
                 Position {
-                    ply: self.ply,
                     current: flipped_current,
                     other: flipped_other,
                 },
@@ -112,10 +107,13 @@ impl Position {
     #[allow(dead_code)]
     pub fn flip(&self) -> Position {
         Position {
-            ply: self.ply,
             current: self.current.flip(),
             other: self.other.flip(),
         }
+    }
+
+    pub fn get_ply(&self) -> u32 {
+        (self.current.0 | self.other.0).count_ones()
     }
 }
 
