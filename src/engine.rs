@@ -73,12 +73,12 @@ impl Engine {
             return Score::Unknown;
         }
 
-        let mut best_score = Score::Loss;
-        let mut new_alpha = alpha;
-        let mut new_beta = beta;
+        let mut nonlosing_moves = self.position.get_nonlosing_moves();
+        if nonlosing_moves.0 == 0 {
+            return Score::Loss;
+        }
 
         let immediate_enemy_threats = self.position.from_other_perspective().get_immediate_threats();
-        let mut nonlosing_moves = self.position.get_nonlosing_moves();
 
         let forced_move_count = immediate_enemy_threats.0.count_ones();
         if forced_move_count > 1 {
@@ -92,15 +92,11 @@ impl Engine {
             let new_board = Bitboard(old_position.current.0 | immediate_enemy_threats.0);
             self.position = Position::new(old_position.other, new_board);
             self.ply += 1;
-            let score = self.negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
+            let score = self.negamax(beta.flip(), alpha.flip(), max_depth - 1)
                 .flip();
             self.ply -= 1;
             self.position = old_position;
             return score;
-        }
-
-        if nonlosing_moves.0 == 0 {
-            return Score::Loss;
         }
 
         let (position_code, symmetric) = self.position.to_normalized_position_code();
@@ -115,6 +111,10 @@ impl Engine {
                 possible_moves.push(Move::new(&self.position, x));
             }
         }
+
+        let mut best_score = Score::Loss;
+        let mut new_alpha = alpha;
+        let mut new_beta = beta;
 
         let trans_score = self.trans_table.fetch(position_code);
         if trans_score.is_exact() {
@@ -153,8 +153,8 @@ impl Engine {
         // If any of the children remains unknown, we may not have an exact score. This can happen
         // alpha-beta cutoffs and depth limits.
         let mut unknown_count = possible_moves.len();
-        for (index, m) in possible_moves.iter().enumerate() {
-            self.position = old_position.position_after_drop(m.x).unwrap();
+        for m in possible_moves {
+            self.position = m.new_position;
             self.ply += 1;
 
             let score = self
@@ -178,11 +178,6 @@ impl Engine {
             }
 
             if new_alpha >= new_beta {
-                self.heuristic.increase_value(m.x, m.y, index as i32);
-                for i in 0..index {
-                    self.heuristic
-                        .increase_value(possible_moves[i].x, possible_moves[i].y, -1);
-                }
                 break;
             }
 
