@@ -141,7 +141,7 @@ impl Engine {
             return Score::Loss;
         }
 
-        let trans_score = self.trans_table.fetch(self.position);
+        let trans_score = self.trans_table.fetch(&self.position);
         if trans_score.is_exact() {
             return trans_score;
         }
@@ -233,7 +233,7 @@ impl Engine {
         }
 
         self.trans_table
-            .store(self.position, best_score, work as u32);
+            .store(&self.position, best_score, work as u32);
         best_score
     }
 }
