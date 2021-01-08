@@ -105,7 +105,7 @@ impl TransTable {
     }
 
     pub fn fetch(&self, position_code: BoardInteger) -> Score {
-        let index: usize = (position_code % self.table_size as u64) as usize;
+        let index: usize = (position_code % self.table_size as Entry) as usize;
         let key: Entry = position_code / self.table_size as Entry;
 
         let slot = self.slots[index];
@@ -121,11 +121,11 @@ impl TransTable {
             }
         }
 
-        match found_entry {
-            Some(entry) => {
-                Score::from_u64((entry & self.score_mask) >> self.key_bits).expect("Invalid score")
-            }
-            None => Score::Unknown,
+        if let Some(entry) = found_entry {
+            let score = (entry & self.score_mask) >> self.key_bits;
+            Score::from_u64_fast(score)
+        } else {
+            Score::Unknown
         }
     }
 }

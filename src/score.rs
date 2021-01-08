@@ -27,6 +27,20 @@ impl Score {
         }
     }
 
+    /// A slightly faster version of FromPrimitive::from_u64 that also returns Score::Unknown
+    /// instead of Option::None.
+    #[inline]
+    pub fn from_u64_fast(number: u64) -> Score {
+        match number {
+            1 => Score::Loss,
+            2 => Score::DrawOrLoss,
+            3 => Score::Draw,
+            4 => Score::DrawOrWin,
+            5 => Score::Win,
+            _ => Score::Unknown,
+        }
+    }
+
     #[allow(dead_code)]
     pub fn is_compatible(self, other: Score) -> bool {
         if self == other || self == Score::Unknown || other == Score::Unknown {
