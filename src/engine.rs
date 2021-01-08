@@ -112,7 +112,7 @@ impl Engine {
             nonlosing_moves = nonlosing_moves.get_left_half();
         }
 
-        let mut possible_moves = Vec::new();
+        let mut possible_moves = Vec::with_capacity(BOARD_WIDTH as usize);
         for x in 0..BOARD_WIDTH {
             let column = (nonlosing_moves.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
             if column != 0 {
