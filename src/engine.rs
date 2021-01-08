@@ -17,16 +17,7 @@ struct Move {
     x: u32,
     y: u32,
     new_position: Position,
-}
-
-impl Move {
-    pub fn new(position: &Position, column: u32) -> Move {
-        Move {
-            x: column,
-            y: position.get_height(column),
-            new_position: Position::new(position.other, position.drop(column)),
-        }
-    }
+    priority: i32,
 }
 
 impl Engine {
@@ -116,7 +107,7 @@ impl Engine {
         for x in 0..BOARD_WIDTH {
             let column = (nonlosing_moves.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
             if column != 0 {
-                possible_moves.push(Move::new(&self.position, x));
+                possible_moves.push(self.create_move(x));
             }
         }
 
@@ -143,17 +134,7 @@ impl Engine {
         }
 
         possible_moves.sort_by(|a, b| {
-            let threats1 = a.new_position.from_other_perspective().count_threats();
-            let threats2 = b.new_position.from_other_perspective().count_threats();
-            if threats1 != threats2 {
-                threats2.cmp(&threats1)
-            } else if a.y != b.y && a.new_position.get_ply() > 20 {
-                b.y.cmp(&a.y)
-            } else {
-                self.heuristic
-                    .get_value(b.x, b.y)
-                    .cmp(&self.heuristic.get_value(a.x, a.y))
-            }
+            b.priority.cmp(&a.priority)
         });
 
         let old_position = self.position;
@@ -213,5 +194,24 @@ impl Engine {
         self.trans_table
             .store(position_code, best_score, work as u32);
         best_score
+    }
+
+    fn create_move(&self, x: u32) -> Move {
+        let new_position = Position::new(self.position.other, self.position.drop(x));
+        let y = self.position.get_height(x);
+
+        let threats = new_position.from_other_perspective().count_threats() as i32;
+        let mut priority: i32 = threats * 1000000;
+        if new_position.get_ply() > 20 {
+            priority += 1000 * y as i32;
+        }
+        priority += self.heuristic.get_value(x, y);
+
+        Move {
+            x,
+            y,
+            new_position,
+            priority,
+        }
     }
 }
