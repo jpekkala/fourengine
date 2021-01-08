@@ -374,6 +374,7 @@ impl Position {
     /// What happens if the other player always plays in the same column as the current player.
     /// The score is returned from the current player's perspective. If there are non-losing moves
     /// in an uneven column, the score cannot be determined and Unknown is returned.
+    #[inline(always)]
     pub fn autofinish_score(&self, nonlosing_moves: Bitboard) -> Score {
         let mut current = self.current.0;
         let mut other = self.other.0;
