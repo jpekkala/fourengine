@@ -40,8 +40,8 @@ pub const BIT_HEIGHT: u32 = BOARD_HEIGHT + 1;
 const ALL_BITS: BoardInteger = (1 << (BIT_HEIGHT * BOARD_WIDTH)) - 1;
 pub const FIRST_COLUMN: BoardInteger = (1 << BIT_HEIGHT) - 1;
 const BOTTOM_ROW: BoardInteger = ALL_BITS / FIRST_COLUMN;
-const TOP_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
-const FULL_BOARD: BoardInteger = ALL_BITS ^ TOP_ROW;
+const BUFFER_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
+const FULL_BOARD: BoardInteger = ALL_BITS ^ BUFFER_ROW;
 const LEFT_HALF: BoardInteger = FIRST_COLUMN |
     (FIRST_COLUMN << BIT_HEIGHT) |
     (FIRST_COLUMN << 2 * BIT_HEIGHT) |
@@ -110,7 +110,7 @@ impl Bitboard {
     }
 
     pub fn is_legal(&self) -> bool {
-        (TOP_ROW & self.0) == 0
+        (BUFFER_ROW & self.0) == 0
     }
 
     pub fn has_disc(&self, x: u32, y: u32) -> bool {
@@ -372,36 +372,42 @@ impl Position {
     }
 
     /// What happens if the other player always plays in the same column as the current player.
-    /// The score is returned from the current player's perspective.
+    /// The score is returned from the current player's perspective. If there are non-losing moves
+    /// in an uneven column, the score cannot be determined and Unknown is returned.
     pub fn autofinish_score(&self, nonlosing_moves: Bitboard) -> Score {
         let mut current = self.current.0;
         let mut other = self.other.0;
         let empty = !self.both();
 
-        let mut loses = false;
-        for x in 0..BOARD_WIDTH {
-            let column_mask = FIRST_COLUMN << x * BIT_HEIGHT;
-            if nonlosing_moves.0 & column_mask == 0 {
-                let height = self.get_height(x);
-                if height != BOARD_HEIGHT {
-                    current = current | (1 << (BIT_HEIGHT * x + height));
-                    loses = true;
-                }
-                continue;
-            }
-
-            if !self.is_column_even(x) {
-                return Score::Unknown;
-            }
-
-            current = current | (empty & ODD_ROWS & column_mask);
-            other = other | (empty & EVEN_ROWS & column_mask);
+        // the other player can imitate moves only if every playable column has an even number of
+        // cells left
+        if (nonlosing_moves.0 & EVEN_ROWS) != 0 {
+            return Score::Unknown;
         }
+
+        // set highest bit for each non-losing column
+        let nonlosing_columns = (FULL_BOARD + nonlosing_moves.0) & BUFFER_ROW;
+        let losing_columns = nonlosing_columns ^ BUFFER_ROW;
+
+        // the same as FULL_BOARD except that losing columns are full zeroes
+        let nonlosing_board = (nonlosing_columns | (losing_columns >> BOARD_HEIGHT)) - BOTTOM_ROW;
+        let empty_mask = nonlosing_board & empty;
+
+        current = current | (empty_mask & ODD_ROWS);
+        other = other | (empty_mask & EVEN_ROWS);
+
+        let heights = self.get_height_cells();
+        // the current player might be able to win with an immediate win after some columns have
+        // been filled
+        current = current | ((heights ^ nonlosing_moves.0) & FULL_BOARD);
 
         if Bitboard(current).has_won() {
             return Score::Unknown;
         }
 
+        // the current player loses if they can't win in any of the non-losing columns and there
+        // are non-full losing columns remaining
+        let loses = (heights & losing_columns) != losing_columns;
         if Bitboard(other).has_won() || loses {
             Score::Loss
         } else {
@@ -412,7 +418,7 @@ impl Position {
 
 impl fmt::Display for Bitboard {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for y in (0..BOARD_HEIGHT).rev() {
+        for y in (0..BOARD_HEIGHT + 1).rev() {
             for x in 0..BOARD_WIDTH {
                 if self.has_disc(x, y) {
                     write!(f, "1")?;
