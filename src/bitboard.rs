@@ -145,8 +145,12 @@ impl Bitboard {
         Bitboard(self.0 & LEFT_HALF)
     }
 
-    fn get_column(&self, x: u32) -> BoardInteger {
+    fn get_column_as_first(&self, x: u32) -> BoardInteger {
         (self.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN
+    }
+
+    fn get_column_in_place(&self, x: u32) -> BoardInteger {
+        self.0 & (FIRST_COLUMN << x * BIT_HEIGHT)
     }
 }
 
@@ -361,21 +365,44 @@ impl Position {
         true
     }
 
-    /// What happens if the second player always plays in the same column as the first player.
-    /// The score is returned from the first player's perspective.
-    pub fn autofinish_score(&self) -> Score {
-        if !self.all_colums_even() {
-            return Score::Unknown;
-        }
+    fn is_column_even(&self, x: u32) -> bool {
+        let both = self.both();
+        let column = (both >> x * BIT_HEIGHT) & FIRST_COLUMN;
+        (column + 1).trailing_zeros() % 2 == 0
+    }
 
+    /// What happens if the other player always plays in the same column as the current player.
+    /// The score is returned from the current player's perspective.
+    pub fn autofinish_score(&self, nonlosing_moves: Bitboard) -> Score {
+        let mut current = self.current.0;
+        let mut other = self.other.0;
         let empty = !self.both();
-        let current = Bitboard(self.current.0 | (empty & ODD_ROWS));
-        if current.has_won() {
+
+        let mut loses = false;
+        for x in 0..BOARD_WIDTH {
+            let column_mask = FIRST_COLUMN << x * BIT_HEIGHT;
+            if nonlosing_moves.0 & column_mask == 0 {
+                let height = self.get_height(x);
+                if height != BOARD_HEIGHT {
+                    current = current | (1 << (BIT_HEIGHT * x + height));
+                    loses = true;
+                }
+                continue;
+            }
+
+            if !self.is_column_even(x) {
+                return Score::Unknown;
+            }
+
+            current = current | (empty & ODD_ROWS & column_mask);
+            other = other | (empty & EVEN_ROWS & column_mask);
+        }
+
+        if Bitboard(current).has_won() {
             return Score::Unknown;
         }
 
-        let other = Bitboard(self.other.0 | (empty & EVEN_ROWS));
-        if other.has_won() {
+        if Bitboard(other).has_won() || loses {
             Score::Loss
         } else {
             Score::Draw
