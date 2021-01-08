@@ -99,6 +99,16 @@ impl Engine {
             return score;
         }
 
+        if self.ply % 2 == 0 {
+            let auto_score = self.position.autofinish_score();
+            if auto_score == Score::Loss {
+                return Score::Loss;
+            }
+            if auto_score == Score::Draw && alpha == Score::Draw {
+                return Score::Draw;
+            }
+        }
+
         let (position_code, symmetric) = self.position.to_normalized_position_code();
         if symmetric {
             nonlosing_moves = nonlosing_moves.get_left_half();

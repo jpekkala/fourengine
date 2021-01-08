@@ -2,6 +2,7 @@
 
 use std::fmt;
 use std::fmt::Formatter;
+use crate::score::Score;
 
 /// board dimensions
 pub const BOARD_WIDTH: u32 = 7;
@@ -349,7 +350,7 @@ impl Position {
         Bitboard(!(enemy_threats.0 >> 1) & possible_moves)
     }
 
-    pub fn all_colums_even(&self) -> bool {
+    fn all_colums_even(&self) -> bool {
         let both = self.both();
         for x in 0..BOARD_WIDTH {
             let column = (both >> x * BIT_HEIGHT) & FIRST_COLUMN;
@@ -360,7 +361,26 @@ impl Position {
         true
     }
 
+    /// What happens if the second player always plays in the same column as the first player.
+    /// The score is returned from the first player's perspective.
+    pub fn autofinish_score(&self) -> Score {
+        if !self.all_colums_even() {
+            return Score::Unknown;
+        }
 
+        let empty = !self.both();
+        let current = Bitboard(self.current.0 | (empty & ODD_ROWS));
+        if current.has_won() {
+            return Score::Unknown;
+        }
+
+        let other = Bitboard(self.other.0 | (empty & EVEN_ROWS));
+        if other.has_won() {
+            Score::Loss
+        } else {
+            Score::Draw
+        }
+    }
 }
 
 impl fmt::Display for Bitboard {
