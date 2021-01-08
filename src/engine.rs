@@ -133,9 +133,10 @@ impl Engine {
             }
         }
 
-        possible_moves.sort_by(|a, b| {
-            b.priority.cmp(&a.priority)
-        });
+
+        insertion_sort(&mut possible_moves);
+        /// Timsort:
+        /// possible_moves.sort_by(|a, b| { b.priority.cmp(&a.priority) });
 
         let old_position = self.position;
         let original_interior_count = self.work_count;
@@ -212,6 +213,19 @@ impl Engine {
             y,
             new_position,
             priority,
+        }
+    }
+}
+
+/// Insertion sort is good when an array is small, which is the case for us because the number of
+/// possible moves is max BOARD_WIDTH. This marginally outperforms the Timsort that Vec::sort uses
+/// internally (but not by much).
+fn insertion_sort(moves: &mut Vec<Move>) {
+    for i in 1..moves.len() {
+        let mut j = i;
+        while j > 0 && moves[j - 1].priority < moves[j].priority {
+            moves.swap(j - 1, j);
+            j -= 1;
         }
     }
 }
