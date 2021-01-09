@@ -1,12 +1,16 @@
-import * as wasm from "fourengine";
+import SearchWorker from 'worker-loader!./js/SearchWorker';
+// TODO: This is fetched twice because the web worker also needs it. Figure out how to share it with web worker
+import * as wasm from 'fourengine';
+
+const worker = new SearchWorker();
+worker.addEventListener('message', function(e) {
+    console.log('Worker message', e.data);
+});
 
 window.solve = function(variation) {
-    console.log(`Solving variation ${variation}...`);
-    // Note that the duration is not fully fair because it includes engine initialization
-    const start = Date.now();
-    const workCount = wasm.solve(variation);
-    const elapsedTime = Date.now() - start;
-    console.log('Elapsed time:', elapsedTime);
-    console.log('Work count is:', workCount);
-    console.log('Nodes per second:', workCount / (elapsedTime / 1000));
+    worker.postMessage({ variation, });
 }
+
+window.showPosition = function(variation) {
+  wasm.show_position(variation);
+};
