@@ -44,8 +44,8 @@ const SCORE_BITS: u32 = 3;
 impl TransTable {
     pub fn new(table_size: usize) -> TransTable {
         let slots: Vec<Slot> = vec![Slot { expensive: 0, recent: 0 }; table_size];
-        let largest_possible_position = (1 << bitboard::POSITION_BITS) - 1;
-        let key_size = closest_power_of_two(largest_possible_position / table_size);
+        let largest_possible_position: BoardInteger = (1 << bitboard::POSITION_BITS) - 1;
+        let key_size = closest_power_of_two(largest_possible_position / table_size as BoardInteger);
         let key_score_size = key_size + SCORE_BITS;
 
         let key_mask = (1 << key_size) - 1;
@@ -131,7 +131,7 @@ impl TransTable {
 }
 
 /// log_2 rounded upwards
-fn closest_power_of_two(number: usize) -> u32 {
+fn closest_power_of_two(number: BoardInteger) -> u32 {
     let mut remaining = number;
     let mut bit_count = 0;
     while remaining > 0 {
