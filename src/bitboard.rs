@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
+use crate::score::Score;
 use std::fmt;
 use std::fmt::Formatter;
-use crate::score::Score;
 
 /// board dimensions
 pub const BOARD_WIDTH: u32 = 7;
@@ -42,27 +42,21 @@ pub const FIRST_COLUMN: BoardInteger = (1 << BIT_HEIGHT) - 1;
 const BOTTOM_ROW: BoardInteger = ALL_BITS / FIRST_COLUMN;
 const BUFFER_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
 const FULL_BOARD: BoardInteger = ALL_BITS ^ BUFFER_ROW;
-const LEFT_HALF: BoardInteger = FIRST_COLUMN |
-    (FIRST_COLUMN << BIT_HEIGHT) |
-    (FIRST_COLUMN << 2 * BIT_HEIGHT) |
-    (FIRST_COLUMN << 3 * BIT_HEIGHT);
+const LEFT_HALF: BoardInteger = FIRST_COLUMN
+    | (FIRST_COLUMN << BIT_HEIGHT)
+    | (FIRST_COLUMN << 2 * BIT_HEIGHT)
+    | (FIRST_COLUMN << 3 * BIT_HEIGHT);
 
 const ODD_ROWS: BoardInteger = BOTTOM_ROW * 0b010101;
 const EVEN_ROWS: BoardInteger = BOTTOM_ROW * 0b101010;
 
 const VERTICAL_LINE: BoardInteger = 0b1111;
-const HORIZONTAL_LINE: BoardInteger = 1 |
-    (1 << BIT_HEIGHT) |
-    (1 << 2 * BIT_HEIGHT) |
-    (1 << 3 * BIT_HEIGHT);
-const SLASH_LINE: BoardInteger = 1 |
-    (1 << (BIT_HEIGHT + 1)) |
-    (1 << (2 * BIT_HEIGHT + 2)) |
-    (1 << (3 * BIT_HEIGHT + 3));
-const BACKSLASH_LINE: BoardInteger = 1 |
-    (1 << (BIT_HEIGHT - 1)) |
-    (1 << (2 * BIT_HEIGHT - 2)) |
-    (1 << (3 * BIT_HEIGHT - 3));
+const HORIZONTAL_LINE: BoardInteger =
+    1 | (1 << BIT_HEIGHT) | (1 << 2 * BIT_HEIGHT) | (1 << 3 * BIT_HEIGHT);
+const SLASH_LINE: BoardInteger =
+    1 | (1 << (BIT_HEIGHT + 1)) | (1 << (2 * BIT_HEIGHT + 2)) | (1 << (3 * BIT_HEIGHT + 3));
+const BACKSLASH_LINE: BoardInteger =
+    1 | (1 << (BIT_HEIGHT - 1)) | (1 << (2 * BIT_HEIGHT - 2)) | (1 << (3 * BIT_HEIGHT - 3));
 
 // const SLASH_LINE: BoardInteger = 1 | (BIT_HEIGHT + 2) | (2 * BIT_HEIGHT + 3) | (3 * BIT_HEIGHT + 4);
 
@@ -176,10 +170,7 @@ impl Position {
     }
 
     pub fn new(current: Bitboard, other: Bitboard) -> Position {
-        Position {
-            current,
-            other,
-        }
+        Position { current, other }
     }
 
     pub fn from_position_code(code: BoardInteger) -> Position {
@@ -201,10 +192,7 @@ impl Position {
         let current = Bitboard(code & both);
         let other = Bitboard(!code & both);
 
-        Position {
-            current,
-            other,
-        }
+        Position { current, other }
     }
 
     pub fn from_variation(variation: &str) -> Position {
@@ -296,10 +284,7 @@ impl Position {
         let code2 = flipped.to_position_code();
         let symmetric = code1 == code2;
         if code1 < code2 {
-            (
-                flipped,
-                symmetric,
-            )
+            (flipped, symmetric)
         } else {
             (*self, symmetric)
         }
@@ -318,13 +303,13 @@ impl Position {
     }
 
     pub fn get_threats(&self) -> Bitboard {
-        let threat_cells =  self.current.get_threat_cells();
+        let threat_cells = self.current.get_threat_cells();
         let empty_cells = FULL_BOARD ^ self.both();
         Bitboard(threat_cells & empty_cells)
     }
 
     pub fn get_immediate_threats(&self) -> Bitboard {
-        let threat_cells =  self.current.get_threat_cells();
+        let threat_cells = self.current.get_threat_cells();
         Bitboard(threat_cells & self.get_height_cells())
     }
 

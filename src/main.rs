@@ -1,11 +1,11 @@
-use crate::engine::Engine;
 use crate::bitboard::Position;
+use crate::engine::Engine;
 use crate::score::Score;
 use clap::{App, Arg};
 use std::fs::File;
+use std::io;
 use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
-use std::{io};
 
 mod bitboard;
 mod engine;
@@ -31,7 +31,7 @@ impl Benchmark {
     }
 }
 
-fn run_variation(engine: &mut Engine,variation: &str) -> Benchmark {
+fn run_variation(engine: &mut Engine, variation: &str) -> Benchmark {
     let position = Position::from_variation(&variation);
     engine.set_position(position);
     let start = Instant::now();

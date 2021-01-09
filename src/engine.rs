@@ -1,4 +1,4 @@
-use crate::bitboard::{Bitboard, Position, BOARD_HEIGHT, BOARD_WIDTH, BIT_HEIGHT, FIRST_COLUMN};
+use crate::bitboard::{Bitboard, Position, BIT_HEIGHT, BOARD_HEIGHT, BOARD_WIDTH, FIRST_COLUMN};
 use crate::heuristic::{FixedHeuristic, Heuristic};
 use crate::score::Score;
 use crate::trans_table::TransTable;
@@ -71,7 +71,10 @@ impl Engine {
             return Score::Loss;
         }
 
-        let immediate_enemy_threats = self.position.from_other_perspective().get_immediate_threats();
+        let immediate_enemy_threats = self
+            .position
+            .from_other_perspective()
+            .get_immediate_threats();
 
         let forced_move_count = immediate_enemy_threats.0.count_ones();
         if forced_move_count > 1 {
@@ -85,7 +88,8 @@ impl Engine {
             let new_board = Bitboard(old_position.current.0 | immediate_enemy_threats.0);
             self.position = Position::new(old_position.other, new_board);
             self.ply += 1;
-            let score = self.negamax(beta.flip(), alpha.flip(), max_depth - 1)
+            let score = self
+                .negamax(beta.flip(), alpha.flip(), max_depth - 1)
                 .flip();
             self.ply -= 1;
             self.position = old_position;
@@ -135,11 +139,9 @@ impl Engine {
             }
         }
 
-
         insertion_sort(&mut possible_moves);
         /// Timsort:
         /// possible_moves.sort_by(|a, b| { b.priority.cmp(&a.priority) });
-
         let old_position = self.position;
         let original_interior_count = self.work_count;
         // If any of the children remains unknown, we may not have an exact score. This can happen

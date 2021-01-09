@@ -43,7 +43,13 @@ const SCORE_BITS: u32 = 3;
 
 impl TransTable {
     pub fn new(table_size: usize) -> TransTable {
-        let slots: Vec<Slot> = vec![Slot { expensive: 0, recent: 0 }; table_size];
+        let slots: Vec<Slot> = vec![
+            Slot {
+                expensive: 0,
+                recent: 0
+            };
+            table_size
+        ];
         let largest_possible_position: BoardInteger = (1 << bitboard::POSITION_BITS) - 1;
         let key_size = closest_power_of_two(largest_possible_position / table_size as BoardInteger);
         let key_score_size = key_size + SCORE_BITS;
