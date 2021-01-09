@@ -4,13 +4,35 @@ import * as wasm from 'fourengine';
 
 const worker = new SearchWorker();
 worker.addEventListener('message', function(e) {
-    console.log('Worker message', e.data);
+    const solution = e.data;
+    console.log('Solution is', solution);
+    setFormDisabled(false);
+
+    let description = '';
+    description += `Score: ${solution.score}<br/>`;
+    description += `Work count: ${solution.workCount}<br/>`;
+    description += `Elapsed time: ${solution.duration} s<br/>`;
+    description += `Nodes per second: ${solution.nps}<br/>`;
+
+    document.getElementById('solution').innerHTML = description;
 });
 
 window.solve = function(variation) {
+    document.getElementById('solution').innerHTML = 'Solving...';
+    setFormDisabled(true);
     worker.postMessage({ variation, });
 }
 
 window.showPosition = function(variation) {
   wasm.show_position(variation);
 };
+
+window.onSolveButtonClick = function() {
+    const variation = document.getElementById('variation').value;
+    window.solve(variation);
+};
+
+function setFormDisabled(disabled) {
+    document.getElementById('solve-button').disabled = disabled;
+    document.getElementById('variation').disabled = disabled;
+}

@@ -14,12 +14,12 @@ self.onmessage = function (e) {
     const { variation } = e.data;
     const start = performance.now();
     const struct = wasm.solve(engine, variation);
-    const elapsedTime = performance.now() - start;
+    const duration = (performance.now() - start) / 1000;
     const result = {
-        duration: elapsedTime,
+        duration,
         score: struct.get_score(),
         workCount: struct.get_work_count(),
-        nps: struct.get_work_count() / elapsedTime * 1000,
+        nps: Math.round(struct.get_work_count() / duration),
     }
     postMessage(result);
 };
