@@ -517,6 +517,7 @@ mod tests {
              0000000\n\
              0000000\n\
              0000000\n\
+             0000000\n\
              0001111\n";
             assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
         }
@@ -528,6 +529,7 @@ mod tests {
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
             let expected = "\
+             0000000\n\
              0000000\n\
              0000000\n\
              0001000\n\
@@ -546,6 +548,7 @@ mod tests {
             let expected = "\
              0000000\n\
              0000000\n\
+             0000000\n\
              0000001\n\
              0000010\n\
              0000100\n\
@@ -560,6 +563,7 @@ mod tests {
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
             let expected = "\
+             0000000\n\
              0000000\n\
              0000000\n\
              0001000\n\
