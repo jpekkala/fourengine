@@ -65,8 +65,21 @@ impl Bitboard {
         Bitboard(0)
     }
 
-    pub fn one() -> Bitboard {
-        Bitboard(1)
+    /// The reverse of to_string
+    pub fn from_string(str: &str) -> Option<Bitboard> {
+        let mut bitboard = Bitboard::empty();
+
+        for (y, line) in str.split_whitespace().rev().enumerate() {
+            for (x, ch) in line.chars().enumerate() {
+                match ch {
+                    '1' => bitboard = bitboard.set_disc(x as u32, y as u32),
+                    '0' => {}
+                    _ => return None,
+                }
+            }
+        }
+
+        Some(bitboard)
     }
 
     pub fn has_won(&self) -> bool {
@@ -110,6 +123,11 @@ impl Bitboard {
     pub fn has_disc(&self, x: u32, y: u32) -> bool {
         let bit = 1 << (BOARD_WIDTH * x + y);
         (self.0 & bit) != 0
+    }
+
+    pub fn set_disc(&self, x: u32, y: u32) -> Bitboard {
+        let bit = 1 << (BOARD_WIDTH * x + y);
+        Bitboard(self.0 | bit)
     }
 
     pub fn flip(&self) -> Bitboard {
@@ -204,7 +222,31 @@ impl Position {
         position
     }
 
-    pub fn from_other_perspective(&self) -> Position {
+    /// The reverse of to_string
+    pub fn from_string(str: &str) -> Option<Position> {
+        let mut first_player = Bitboard::empty();
+        let mut second_player = Bitboard::empty();
+
+        for (y, line) in str.split_whitespace().rev().enumerate() {
+            for (x, ch) in line.chars().enumerate() {
+                match ch {
+                    'X' => first_player = first_player.set_disc(x as u32, y as u32),
+                    'O' => second_player = second_player.set_disc(x as u32, y as u32),
+                    '.' => {}
+                    _ => return None,
+                }
+            }
+        }
+
+        let ply = first_player.0.count_ones() + second_player.0.count_ones();
+        if ply % 2 == 0 {
+            Some(Position::new(first_player, second_player))
+        } else {
+            Some(Position::new(second_player, first_player))
+        }
+    }
+
+    pub fn to_other_perspective(&self) -> Position {
         Position {
             current: self.other,
             other: self.current,
@@ -335,7 +377,7 @@ impl Position {
 
     pub fn get_nonlosing_moves(&self) -> Bitboard {
         let possible_moves = self.get_height_cells() & FULL_BOARD;
-        let enemy_threats = self.from_other_perspective().get_threats();
+        let enemy_threats = self.to_other_perspective().get_threats();
         Bitboard(!(enemy_threats.0 >> 1) & possible_moves)
     }
 
@@ -434,13 +476,35 @@ impl fmt::Display for Position {
     }
 }
 
+/// These macros allow tests to be written in a somewhat more concise way without formatting being
+/// affected by cargo fmt.
+macro_rules! position {
+    ($($x:literal)+) => {
+        Position::from_string(concat!($($x,"\n",)+)).expect("Invalid position representation");
+    };
+}
+
+macro_rules! bitboard {
+    ($($x:literal)+) => {
+        Bitboard::from_string(concat!($($x,"\n",)+)).expect("Invalid bitboard representation");
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn draw_from_variation() {
-        let position = Position::from_variation("444444");
+    fn position_macro() {
+        let pos = position!(
+            "...O..."
+            "...X..."
+            "...O..."
+            "...X..."
+            "...O..."
+            "...X..."
+        );
+
         let expected = "\
              ...O...\n\
              ...X...\n\
@@ -448,22 +512,68 @@ mod tests {
              ...X...\n\
              ...O...\n\
              ...X...\n";
-        assert_eq!(position.to_string(), expected);
+
+        assert_eq!(pos.to_string(), expected);
+    }
+
+    #[test]
+    fn bitboard_macro() {
+        // buffer row is optional
+        let bitboard = bitboard!(
+            "0000000"
+            "0001000"
+            "0000000"
+            "0001000"
+            "0000000"
+            "0001000"
+        );
+
+        let expected = "\
+             0000000\n\
+             0000000\n\
+             0001000\n\
+             0000000\n\
+             0001000\n\
+             0000000\n\
+             0001000\n";
+
+        assert_eq!(bitboard.to_string(), expected);
+    }
+
+    #[test]
+    fn from_variation() {
+        let position = Position::from_variation("444444");
+        assert_eq!(position, position!(
+             "...O..."
+             "...X..."
+             "...O..."
+             "...X..."
+             "...O..."
+             "...X..."
+        ));
 
         let position = Position::from_variation("436675553");
-        let expected = "\
-             .......\n\
-             .......\n\
-             .......\n\
-             ....O..\n\
-             ..X.XO.\n\
-             ..OXOXX\n";
-        assert_eq!(position.to_string(), expected);
+        assert_eq!(position, position!(
+             "......."
+             "......."
+             "......."
+             "....O.."
+             "..X.XO."
+             "..OXOXX"
+        ));
     }
 
     #[test]
     fn height() {
         let position = Position::from_variation("436675553");
+        assert_eq!(position, position!(
+             "......."
+             "......."
+             "......."
+             "....O.."
+             "..X.XO."
+             "..OXOXX"
+        ));
         assert_eq!(position.get_height(0), 0);
         assert_eq!(position.get_height(1), 0);
         assert_eq!(position.get_height(2), 2);
@@ -476,24 +586,24 @@ mod tests {
     #[test]
     fn flip() {
         let position = Position::from_variation("436675553");
-        let expected = "\
-             .......\n\
-             .......\n\
-             .......\n\
-             ....O..\n\
-             ..X.XO.\n\
-             ..OXOXX\n";
-        assert_eq!(position.to_string(), expected);
+        assert_eq!(position, position!(
+             "......."
+             "......."
+             "......."
+             "....O.."
+             "..X.XO."
+             "..OXOXX"
+        ));
 
         let flipped = position.flip();
-        let expected = "\
-             .......\n\
-             .......\n\
-             .......\n\
-             ..O....\n\
-             .OX.X..\n\
-             XXOXO..\n";
-        assert_eq!(flipped.to_string(), expected);
+        assert_eq!(flipped, position!(
+             "......."
+             "......."
+             "......."
+             "..O...."
+             ".OX.X.."
+             "XXOXO.."
+        ));
     }
 
     #[test]
@@ -511,15 +621,14 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
-            let expected = "\
-             0000000\n\
-             0000000\n\
-             0000000\n\
-             0000000\n\
-             0000000\n\
-             0000000\n\
-             0001111\n";
-            assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
+            assert_eq!(Bitboard(white_board.get_won_cells()), bitboard!(
+                "0000000"
+                "0000000"
+                "0000000"
+                "0000000"
+                "0000000"
+                "0001111"
+            ));
         }
 
         // vertical
@@ -528,15 +637,14 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
-            let expected = "\
-             0000000\n\
-             0000000\n\
-             0000000\n\
-             0001000\n\
-             0001000\n\
-             0001000\n\
-             0001000\n";
-            assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
+            assert_eq!(Bitboard(white_board.get_won_cells()), bitboard!(
+                "0000000"
+                "0000000"
+                "0001000"
+                "0001000"
+                "0001000"
+                "0001000"
+            ));
         }
 
         // slash (/)
@@ -545,15 +653,14 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
-            let expected = "\
-             0000000\n\
-             0000000\n\
-             0000000\n\
-             0000001\n\
-             0000010\n\
-             0000100\n\
-             0001000\n";
-            assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
+            assert_eq!(Bitboard(white_board.get_won_cells()), bitboard!(
+                "0000000"
+                "0000000"
+                "0000001"
+                "0000010"
+                "0000100"
+                "0001000"
+            ));
         }
 
         // backslash (\)
@@ -562,15 +669,14 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
-            let expected = "\
-             0000000\n\
-             0000000\n\
-             0000000\n\
-             0001000\n\
-             0000100\n\
-             0000010\n\
-             0000001\n";
-            assert_eq!(Bitboard(white_board.get_won_cells()).to_string(), expected);
+            assert_eq!(Bitboard(white_board.get_won_cells()), bitboard!(
+                "0000000"
+                "0000000"
+                "0001000"
+                "0000100"
+                "0000010"
+                "0000001"
+            ));
         }
     }
 
@@ -578,7 +684,7 @@ mod tests {
     fn threat_counting() {
         let position = Position::from_variation("43443555");
         assert_eq!(position.count_threats(), 2);
-        assert_eq!(position.from_other_perspective().count_threats(), 0);
+        assert_eq!(position.to_other_perspective().count_threats(), 0);
     }
 
     #[test]

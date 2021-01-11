@@ -71,10 +71,7 @@ impl Engine {
             return Score::Loss;
         }
 
-        let immediate_enemy_threats = self
-            .position
-            .from_other_perspective()
-            .get_immediate_threats();
+        let immediate_enemy_threats = self.position.to_other_perspective().get_immediate_threats();
 
         let forced_move_count = immediate_enemy_threats.0.count_ones();
         if forced_move_count > 1 {
@@ -205,7 +202,7 @@ impl Engine {
         let new_position = Position::new(self.position.other, self.position.drop(x));
         let y = self.position.get_height(x);
 
-        let threats = new_position.from_other_perspective().count_threats() as i32;
+        let threats = new_position.to_other_perspective().count_threats() as i32;
         let mut priority: i32 = threats * 1000000;
         if self.ply > 19 {
             priority += 1000 * y as i32;
