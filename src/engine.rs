@@ -207,7 +207,7 @@ impl Engine {
 
         let threats = new_position.from_other_perspective().count_threats() as i32;
         let mut priority: i32 = threats * 1000000;
-        if new_position.get_ply() > 20 {
+        if self.ply > 19 {
             priority += 1000 * y as i32;
         }
         priority += self.heuristic.get_value(x, y);
