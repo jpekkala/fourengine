@@ -10,7 +10,7 @@ export default class Board {
         this.drawBoard();
     }
 
-    getSvgDisc({ col, row, animate }) {
+    getSvgDisc({ col, row, animate, animationSettings = {} }) {
         const value = this.position[col * this.cols + row];
         if (!value) return;
         const axis = this.cellSize / 2;
@@ -25,21 +25,26 @@ export default class Board {
             default: return;
         }
 
+        const svgTime = this.svgView.getCurrentTime();
+
         const circle = this.getNode('circle', {
             cx: axis,
             cy,
             fill: `url(#${color})`,
             r: radius,
+            id: `disc_${col}${row}`
         });
 
         if (animate) {
+            const animFrom = animationSettings.from || -axis;
+            const animTo = animationSettings.to || cy;
+            const duration = (cy + axis) / this.cellSize * this.animationSpeedMs;
             const animation = this.getNode('animate', {
                 attributeName: 'cy',
-                from: -axis,
-                to: cy,
-                // TODO: adjust time
-                dur: `${(this.rows - row) * this.animationSpeedMs}ms`,
-                begin: '0s',
+                from: animFrom,
+                to: animTo,
+                dur: `${duration}ms`,
+                begin: `${svgTime}s`,
                 fill: 'freeze'
             })
             circle.appendChild(animation);
@@ -56,7 +61,7 @@ export default class Board {
         const skewY = this.cellSize / 10;
         const skewX = -skewY;
 
-        const html = `
+        const board = this.stringToHTML(`
             <div style="width:${width}px;height:${height}px;margin-top:20px;border:${Math.round(axis/2)}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
                 <svg width="${width}px" viewBox="0 0 ${width} ${height}" id="svg_view">
                     <defs>
@@ -81,11 +86,9 @@ export default class Board {
                         </radialGradient>
                     </defs>
                 </svg>
-            </div>`;
-
-        const board = this.stringToHTML(html);
+            </div>`);
         this.container.appendChild(board);
-        const svgView = board.querySelector('#svg_view');
+        this.svgView = board.querySelector('#svg_view');
 
         for (let i = 0; i < this.cols; i++) {
             const column = this.getNode('svg', {
@@ -94,7 +97,7 @@ export default class Board {
                 id: `column_${i}`
             });
             column.addEventListener('mousedown', e => this.mouseHandler(i, e));
-            svgView.appendChild(column);
+            this.svgView.appendChild(column);
 
             for (let j = 0; j < this.rows; j++) {
                 const disc = this.getSvgDisc({ col: i, row: j });
@@ -111,17 +114,38 @@ export default class Board {
         }
     }
 
+    pop(col) {
+        // TODO replace column
+    }
+
     mouseHandler(col, e) {
         if (e.which === 1) {
-            // TODO: drop
+            // TODO: validate column and drop
             console.log(`Left-clicked column ${col}`);
+            /**
+             * TODO: remove when game class is implemented
+             */
+            const value = this.position.filter(_ => true).length % 2 ? 2 : 1
+            let row;
+            for (let i = 0; i < this.rows; i++) {
+                if (!this.position[col * this.cols + i]) {
+                    row = i;
+                    break;
+                }
+            }
+            if (row == null) {
+                return;
+            }
+            this.drop({ col, row, value })
         } else if (e.which === 3) {
-            // TODO: pop
+            // TODO: validate column and pop
             console.log(`Right-clicked column ${col}`);
+            const bottomDisc = this.container.querySelector(`#disc_${col}0`);
+            console.log('bottomDisc', bottomDisc)
         }
     }
 
-    animateMove({ col, row, newPosition, isWinningMove = false, moveType = 'drop', value }) {
+    drop({ col, row, value }) {
         this.position[col * this.cols + row] = value;
         const animatedDisc = this.getSvgDisc({ col, row, animate: true });
         const column = this.container.querySelector(`#column_${col}`);

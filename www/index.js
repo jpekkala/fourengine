@@ -18,13 +18,9 @@ worker.addEventListener('message', function(e) {
     document.getElementById('solution').innerHTML = description;
 });
 
-window.onload = function() {
-    const div = document.querySelector('#c4_board');
-    const board = new Board(div, { position: [
-        1, 2, 1, 2
-    ]});
-    board.animateMove({ col: 1, row: 0, value: 1 })
-};
+
+const div = document.querySelector('#c4_board');
+const board = new Board(div);
 
 window.solve = function(variation) {
     document.getElementById('solution').innerHTML = 'Solving...';
