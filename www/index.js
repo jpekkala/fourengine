@@ -1,6 +1,7 @@
 import SearchWorker from 'worker-loader!./js/SearchWorker';
 // TODO: This is fetched twice because the web worker also needs it. Figure out how to share it with web worker
 import * as wasm from 'fourengine';
+import Board from './js/Board';
 
 const worker = new SearchWorker();
 worker.addEventListener('message', function(e) {
@@ -16,6 +17,11 @@ worker.addEventListener('message', function(e) {
 
     document.getElementById('solution').innerHTML = description;
 });
+
+window.onload = function() {
+    const div = document.querySelector('#c4_board');
+    const board = new Board(div);
+};
 
 window.solve = function(variation) {
     document.getElementById('solution').innerHTML = 'Solving...';
