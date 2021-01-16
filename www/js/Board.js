@@ -30,7 +30,7 @@ export default class Board {
             cy,
             fill: `url(#${color})`,
             r: radius,
-        })
+        });
 
         if (animate) {
             const animation = this.getNode('animate', {
@@ -42,10 +42,10 @@ export default class Board {
                 begin: '0s',
                 fill: 'freeze'
             })
-            circle.appendChild(animation)
+            circle.appendChild(animation);
         }
 
-        return circle
+        return circle;
     }
 
     drawBoard() {
@@ -57,7 +57,7 @@ export default class Board {
         const skewX = -skewY;
 
         const html = `
-            <div style="width:${width}px;height:${height}px;margin-top:20px;border:${Math.round(axis/2)}px solid ${this.boardColor};border-radius:${axis}px;">
+            <div style="width:${width}px;height:${height}px;margin-top:20px;border:${Math.round(axis/2)}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
                 <svg width="${width}px" viewBox="0 0 ${width} ${height}" id="svg_view">
                     <defs>
                         <pattern id="grid_pattern" patternUnits="userSpaceOnUse" width="${this.cellSize}" height="${this.cellSize}">
@@ -92,7 +92,8 @@ export default class Board {
                 x: this.cellSize * i,
                 y: 0,
                 id: `column_${i}`
-            })
+            });
+            column.addEventListener('mousedown', e => this.mouseHandler(i, e));
             svgView.appendChild(column);
 
             for (let j = 0; j < this.rows; j++) {
@@ -105,8 +106,18 @@ export default class Board {
                 height,
                 fill: this.boardColor,
                 mask: 'url(#column_mask)'
-            })
+            });
             column.appendChild(mask);
+        }
+    }
+
+    mouseHandler(col, e) {
+        if (e.which === 1) {
+            // TODO: drop
+            console.log(`Left-clicked column ${col}`);
+        } else if (e.which === 3) {
+            // TODO: pop
+            console.log(`Right-clicked column ${col}`);
         }
     }
 
@@ -118,9 +129,9 @@ export default class Board {
     }
 
     setPosition(pos) {
-        console.log('Setting position:', pos)
-        this.position = pos
-        this.drawBoard()
+        console.log('Setting position:', pos);
+        this.position = pos;
+        this.drawBoard();
     }
 
     stringToHTML(str) {
@@ -134,6 +145,6 @@ export default class Board {
         for (const p in props) {
             n.setAttributeNS(null, p, props[p]);
         }
-        return n
+        return n;
     }
 }
