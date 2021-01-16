@@ -20,7 +20,10 @@ worker.addEventListener('message', function(e) {
 
 window.onload = function() {
     const div = document.querySelector('#c4_board');
-    const board = new Board(div);
+    const board = new Board(div, { position: [
+        1, 2, 1, 2
+    ]});
+    board.animateMove({ col: 1, row: 0, value: 1 })
 };
 
 window.solve = function(variation) {
@@ -30,7 +33,7 @@ window.solve = function(variation) {
 }
 
 window.showPosition = function(variation) {
-  wasm.show_position(variation);
+    wasm.show_position(variation);
 };
 
 window.onSolveButtonClick = function() {
