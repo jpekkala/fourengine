@@ -2,7 +2,6 @@ use wasm_bindgen::prelude::*;
 use fourengine::engine::Engine;
 use fourengine::bitboard::{Disc, Position};
 use fourengine::score::Score;
-use std::time::Duration;
 
 #[wasm_bindgen(js_name = Position)]
 pub struct JsPosition {

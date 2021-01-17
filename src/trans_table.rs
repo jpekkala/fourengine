@@ -1,7 +1,5 @@
-use num_traits::FromPrimitive;
-
 use crate::bitboard;
-use crate::bitboard::{BoardInteger, Position};
+use crate::bitboard::{BoardInteger};
 use crate::score::*;
 
 type Entry = bitboard::BoardInteger;

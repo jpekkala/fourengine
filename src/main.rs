@@ -7,11 +7,11 @@ use std::io;
 use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
 
-mod bitboard;
-mod engine;
-mod heuristic;
-mod score;
-mod trans_table;
+pub mod bitboard;
+pub mod engine;
+pub mod heuristic;
+pub mod score;
+pub mod trans_table;
 
 struct Benchmark {
     score: Score,

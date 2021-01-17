@@ -137,8 +137,8 @@ impl Engine {
         }
 
         insertion_sort(&mut possible_moves);
-        /// Timsort:
-        /// possible_moves.sort_by(|a, b| { b.priority.cmp(&a.priority) });
+        // Timsort:
+        // possible_moves.sort_by(|a, b| { b.priority.cmp(&a.priority) });
         let old_position = self.position;
         let original_interior_count = self.work_count;
         // If any of the children remains unknown, we may not have an exact score. This can happen

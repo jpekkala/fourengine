@@ -478,12 +478,14 @@ impl fmt::Display for Position {
 
 /// These macros allow tests to be written in a somewhat more concise way without formatting being
 /// affected by cargo fmt.
+#[macro_export]
 macro_rules! position {
     ($($x:literal)+) => {
         Position::from_string(concat!($($x,"\n",)+)).expect("Invalid position representation");
     };
 }
 
+#[macro_export]
 macro_rules! bitboard {
     ($($x:literal)+) => {
         Bitboard::from_string(concat!($($x,"\n",)+)).expect("Invalid bitboard representation");
