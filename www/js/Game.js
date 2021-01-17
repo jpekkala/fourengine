@@ -61,10 +61,17 @@ export default class Game {
         return new Promise((resolve, reject) => {
             const worker = new SearchWorker();
             worker.addEventListener('message', function (e) {
-                if (e.data.error) {
+                const type = e.data.type;
+                if (type === 'log') {
+                    console.log(...e.data.args);
+                } else if (type === 'error') {
+                    console.error(...e.data.args);
+                } else if (type === 'reject') {
                     reject(e.data.error);
-                } else {
+                } else if (type === 'solution') {
                     resolve(e.data);
+                } else {
+                    console.error('Unhandled worker message', e);
                 }
             });
             worker.postMessage({ variation: this.variation });
