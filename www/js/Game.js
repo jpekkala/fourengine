@@ -2,6 +2,9 @@ import SearchWorker from 'worker-loader!./SearchWorker';
 // TODO: This is fetched twice because the web worker also needs it. Figure out how to share it with web worker
 import * as wasm from 'fourengine';
 
+const BOARD_WIDTH = 7;
+const BOARD_HEIGHT = 6;
+
 export default class Game {
 
     constructor(variation = '') {
@@ -15,6 +18,16 @@ export default class Game {
 
     getCell(x, y) {
         return this.position.getCell(x, y);
+    }
+
+    getCellMatrix() {
+        const matrix = new Array(BOARD_WIDTH * BOARD_HEIGHT);
+        for (let x = 0; x < BOARD_WIDTH; x++) {
+            for (let y = 0; y < BOARD_HEIGHT; y++) {
+                matrix[x * BOARD_HEIGHT + y] = this.getCell(x, y);
+            }
+        }
+        return matrix;
     }
 
     hasWon() {

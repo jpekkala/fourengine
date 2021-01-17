@@ -12,6 +12,7 @@ window.solve = async function(variation) {
     try {
         console.log('Solving variation', variation);
         const game = new Game(variation);
+        board.setPosition(game.getCellMatrix());
         const solution = await game.solve();
         console.log('Solution is', solution);
         let description = '';

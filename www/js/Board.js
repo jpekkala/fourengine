@@ -11,7 +11,7 @@ export default class Board {
     }
 
     getSvgDisc({ col, row, animate, animationSettings = {} }) {
-        const value = this.position[col * this.cols + row];
+        const value = this.position[col * this.rows + row];
         if (!value) return;
         const axis = this.cellSize / 2;
         const radius = axis * 0.9;
@@ -128,7 +128,7 @@ export default class Board {
             const value = this.position.filter(_ => true).length % 2 ? 2 : 1
             let row;
             for (let i = 0; i < this.rows; i++) {
-                if (!this.position[col * this.cols + i]) {
+                if (!this.position[col * this.rows + i]) {
                     row = i;
                     break;
                 }
@@ -146,7 +146,7 @@ export default class Board {
     }
 
     drop({ col, row, value }) {
-        this.position[col * this.cols + row] = value;
+        this.position[col * this.rows + row] = value;
         const animatedDisc = this.getSvgDisc({ col, row, animate: true });
         const column = this.container.querySelector(`#column_${col}`);
         column.insertBefore(animatedDisc, column.firstChild);
