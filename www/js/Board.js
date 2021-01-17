@@ -1,17 +1,24 @@
+import Game from './Game';
+
 export default class Board {
-    constructor(container, options = {}) {
-        this.container = container;
+
+    constructor(options = {}) {
+        this.container = options.container || document.querySelector('#c4_board');
         this.cols = options.cols || 7;
         this.rows = options.rows || 6;
         this.cellSize = options.cellSize || 75;
         this.boardColor = options.boardColor || 'black';
-        this.position = options.position || [];
         this.animationSpeedMs = options.animationSpeedMs || 200;
+        this.game = new Game(options.variation);
         this.drawBoard();
     }
 
-    getSvgDisc({ col, row, animate, animationSettings = {} }) {
-        const value = this.position[col * this.rows + row];
+    get position() {
+        return this.game.getCellMatrix();
+    }
+
+    getSvgDisc({ column, row, animate, animationSettings = {} }) {
+        const value = this.position[column * this.rows + row];
         if (!value) return;
         const axis = this.cellSize / 2;
         const radius = axis * 0.9;
@@ -25,17 +32,16 @@ export default class Board {
             default: return;
         }
 
-        const svgTime = this.svgView.getCurrentTime();
-
         const circle = this.getNode('circle', {
             cx: axis,
             cy,
             fill: `url(#${color})`,
             r: radius,
-            id: `disc_${col}${row}`
+            id: `disc_${column}${row}`
         });
 
         if (animate) {
+            const svgTime = this.svgView.getCurrentTime();
             const animFrom = animationSettings.from || -axis;
             const animTo = animationSettings.to || cy;
             const duration = (cy + axis) / this.cellSize * this.animationSpeedMs;
@@ -96,11 +102,12 @@ export default class Board {
                 y: 0,
                 id: `column_${i}`
             });
+
             column.addEventListener('mousedown', e => this.mouseHandler(i, e));
             this.svgView.appendChild(column);
 
             for (let j = 0; j < this.rows; j++) {
-                const disc = this.getSvgDisc({ col: i, row: j });
+                const disc = this.getSvgDisc({ column: i, row: j });
                 if (disc) column.appendChild(disc);
             }
 
@@ -114,47 +121,50 @@ export default class Board {
         }
     }
 
-    pop(col) {
-        // TODO replace column
+    pop(column) {
+        // Replace column
     }
 
-    mouseHandler(col, e) {
+    mouseHandler(column, e) {
+        if (this.solving) return;
+
         if (e.which === 1) {
-            // TODO: validate column and drop
-            console.log(`Left-clicked column ${col}`);
-            /**
-             * TODO: remove when game class is implemented
-             */
-            const value = this.position.filter(_ => true).length % 2 ? 2 : 1
-            let row;
-            for (let i = 0; i < this.rows; i++) {
-                if (!this.position[col * this.rows + i]) {
-                    row = i;
-                    break;
-                }
-            }
-            if (row == null) {
-                return;
-            }
-            this.drop({ col, row, value })
+            console.log(`Clicked column ${column}`);
+            this.drop(column);
         } else if (e.which === 3) {
-            // TODO: validate column and pop
-            console.log(`Right-clicked column ${col}`);
-            const bottomDisc = this.container.querySelector(`#disc_${col}0`);
-            console.log('bottomDisc', bottomDisc)
+            console.log(`Right-clicked column ${column}`);
         }
     }
 
-    drop({ col, row, value }) {
-        this.position[col * this.rows + row] = value;
-        const animatedDisc = this.getSvgDisc({ col, row, animate: true });
-        const column = this.container.querySelector(`#column_${col}`);
-        column.insertBefore(animatedDisc, column.firstChild);
+    async solve() {
+        this.solving = true;
+        document.getElementById('solution').innerHTML = 'Solving...';
+        try {
+            const solution = await this.game.solve();
+            console.log('Solution is', solution);
+            let description = '';
+            description += `Score: ${solution.score}<br/>`;
+            description += `Work count: ${solution.workCount}<br/>`;
+            description += `Elapsed time: ${solution.duration} s<br/>`;
+            description += `Nodes per second: ${solution.nps}<br/>`;
+            document.getElementById('solution').innerHTML = description;
+        } finally {
+            this.solving = false;
+        }
     }
 
-    setPosition(pos) {
-        console.log('Setting position:', pos);
-        this.position = pos;
+    drop(column) {
+        if (!this.game.canDrop(column)) return;
+        const pos = this.game.drop(column);
+        this.solve();
+        const animatedDisc = this.getSvgDisc({ ...pos, animate: true });
+        const boardColumn = this.container.querySelector(`#column_${column}`);
+        boardColumn.insertBefore(animatedDisc, boardColumn.firstChild);
+    }
+
+    setVariation(variation) {
+        console.log('Setting variation:', variation);
+        this.game.setVariation(variation);
         this.drawBoard();
     }
 
@@ -172,3 +182,5 @@ export default class Board {
         return n;
     }
 }
+
+new Board();
