@@ -38,10 +38,32 @@ impl JsPosition {
     }
 }
 
-/// This wrapper exists only for annotating with wasm_bindgen
-#[wasm_bindgen]
-pub struct EngineWrapper {
+#[wasm_bindgen(js_name = Engine)]
+pub struct JsEngine {
     engine: Engine
+}
+
+#[wasm_bindgen(js_class = Engine)]
+impl JsEngine {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> JsEngine {
+        JsEngine {
+            engine: Engine::new()
+        }
+    }
+
+    #[wasm_bindgen]
+    pub fn solve(&mut self, variation: &str) -> Solution {
+        let mut engine = &mut self.engine;
+        let position = Position::from_variation(variation);
+        engine.set_position(position);
+        engine.work_count = 0;
+        let score = engine.solve();
+        Solution {
+            score,
+            work_count: engine.work_count,
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -52,42 +74,14 @@ pub struct Solution {
 
 #[wasm_bindgen]
 impl Solution {
+    #[wasm_bindgen(js_name = getScore)]
     pub fn get_score(&self) -> String {
         format!("{:?}", self.score)
     }
 
+    #[wasm_bindgen(js_name = getWorkCount)]
     pub fn get_work_count(&self) -> usize {
         self.work_count
     }
 }
 
-#[wasm_bindgen]
-extern {
-    pub fn alert(s: &str);
-}
-
-#[wasm_bindgen]
-pub fn show_position(variation: &str) {
-    let position = Position::from_variation(variation);
-    alert(&format!("{}", position));
-}
-
-#[wasm_bindgen]
-pub fn init_engine() -> EngineWrapper {
-    EngineWrapper {
-        engine: Engine::new()
-    }
-}
-
-#[wasm_bindgen]
-pub fn solve(engine_wrapper: &mut EngineWrapper, variation: &str) -> Solution {
-    let mut engine = &mut engine_wrapper.engine;
-    let position = Position::from_variation(variation);
-    engine.set_position(position);
-    engine.work_count = 0;
-    let score = engine.solve();
-    Solution {
-        score,
-        work_count: engine.work_count,
-    }
-}
