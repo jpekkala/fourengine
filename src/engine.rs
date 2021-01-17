@@ -106,14 +106,6 @@ impl Engine {
             nonlosing_moves = nonlosing_moves.get_left_half();
         }
 
-        let mut possible_moves = Vec::with_capacity(BOARD_WIDTH as usize);
-        for x in 0..BOARD_WIDTH {
-            let column = (nonlosing_moves.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
-            if column != 0 {
-                possible_moves.push(self.create_move(x));
-            }
-        }
-
         let mut best_score = Score::Loss;
         let mut new_alpha = alpha;
         let mut new_beta = beta;
@@ -133,6 +125,14 @@ impl Engine {
 
             if new_alpha == new_beta {
                 return trans_score;
+            }
+        }
+
+        let mut possible_moves = Vec::with_capacity(BOARD_WIDTH as usize);
+        for x in 0..BOARD_WIDTH {
+            let column = (nonlosing_moves.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
+            if column != 0 {
+                possible_moves.push(self.create_move(x));
             }
         }
 
