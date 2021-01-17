@@ -6,7 +6,7 @@ window.solve = async function(variation) {
     setFormDisabled(true);
     try {
         console.log('Solving variation', variation);
-        const board = new Board({ variation });
+        board.setVariation(variation);
         await board.solve();
     } finally {
         setFormDisabled(false);

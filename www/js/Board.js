@@ -182,5 +182,3 @@ export default class Board {
         return n;
     }
 }
-
-new Board();
