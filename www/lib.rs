@@ -1,11 +1,11 @@
-use wasm_bindgen::prelude::*;
-use fourengine::engine::Engine;
 use fourengine::bitboard::{Disc, Position};
+use fourengine::engine::Engine;
 use fourengine::score::Score;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(js_name = Position)]
 pub struct JsPosition {
-    position: Position
+    position: Position,
 }
 
 #[wasm_bindgen(js_class = Position)]
@@ -13,7 +13,7 @@ impl JsPosition {
     #[wasm_bindgen(constructor)]
     pub fn new(variation: &str) -> JsPosition {
         JsPosition {
-            position: Position::from_variation(variation)
+            position: Position::from_variation(variation),
         }
     }
 
@@ -51,7 +51,7 @@ impl JsPosition {
 
 #[wasm_bindgen(js_name = Engine)]
 pub struct JsEngine {
-    engine: Engine
+    engine: Engine,
 }
 
 #[wasm_bindgen(js_class = Engine)]
@@ -59,7 +59,7 @@ impl JsEngine {
     #[wasm_bindgen(constructor)]
     pub fn new() -> JsEngine {
         JsEngine {
-            engine: Engine::new()
+            engine: Engine::new(),
         }
     }
 
@@ -95,4 +95,3 @@ impl Solution {
         self.work_count
     }
 }
-

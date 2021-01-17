@@ -545,37 +545,46 @@ mod tests {
     #[test]
     fn from_variation() {
         let position = Position::from_variation("444444");
-        assert_eq!(position, position!(
-             "...O..."
-             "...X..."
-             "...O..."
-             "...X..."
-             "...O..."
-             "...X..."
-        ));
+        assert_eq!(
+            position,
+            position!(
+                 "...O..."
+                 "...X..."
+                 "...O..."
+                 "...X..."
+                 "...O..."
+                 "...X..."
+            )
+        );
 
         let position = Position::from_variation("436675553");
-        assert_eq!(position, position!(
-             "......."
-             "......."
-             "......."
-             "....O.."
-             "..X.XO."
-             "..OXOXX"
-        ));
+        assert_eq!(
+            position,
+            position!(
+                 "......."
+                 "......."
+                 "......."
+                 "....O.."
+                 "..X.XO."
+                 "..OXOXX"
+            )
+        );
     }
 
     #[test]
     fn height() {
         let position = Position::from_variation("436675553");
-        assert_eq!(position, position!(
-             "......."
-             "......."
-             "......."
-             "....O.."
-             "..X.XO."
-             "..OXOXX"
-        ));
+        assert_eq!(
+            position,
+            position!(
+                 "......."
+                 "......."
+                 "......."
+                 "....O.."
+                 "..X.XO."
+                 "..OXOXX"
+            )
+        );
         assert_eq!(position.get_height(0), 0);
         assert_eq!(position.get_height(1), 0);
         assert_eq!(position.get_height(2), 2);
@@ -588,24 +597,30 @@ mod tests {
     #[test]
     fn flip() {
         let position = Position::from_variation("436675553");
-        assert_eq!(position, position!(
-             "......."
-             "......."
-             "......."
-             "....O.."
-             "..X.XO."
-             "..OXOXX"
-        ));
+        assert_eq!(
+            position,
+            position!(
+                 "......."
+                 "......."
+                 "......."
+                 "....O.."
+                 "..X.XO."
+                 "..OXOXX"
+            )
+        );
 
         let flipped = position.flip();
-        assert_eq!(flipped, position!(
-             "......."
-             "......."
-             "......."
-             "..O...."
-             ".OX.X.."
-             "XXOXO.."
-        ));
+        assert_eq!(
+            flipped,
+            position!(
+                 "......."
+                 "......."
+                 "......."
+                 "..O...."
+                 ".OX.X.."
+                 "XXOXO.."
+            )
+        );
     }
 
     #[test]
@@ -623,14 +638,17 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
-            assert_eq!(Bitboard(white_board.get_won_cells()), bitboard!(
-                "0000000"
-                "0000000"
-                "0000000"
-                "0000000"
-                "0000000"
-                "0001111"
-            ));
+            assert_eq!(
+                Bitboard(white_board.get_won_cells()),
+                bitboard!(
+                    "0000000"
+                    "0000000"
+                    "0000000"
+                    "0000000"
+                    "0000000"
+                    "0001111"
+                )
+            );
         }
 
         // vertical
@@ -639,14 +657,17 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
-            assert_eq!(Bitboard(white_board.get_won_cells()), bitboard!(
-                "0000000"
-                "0000000"
-                "0001000"
-                "0001000"
-                "0001000"
-                "0001000"
-            ));
+            assert_eq!(
+                Bitboard(white_board.get_won_cells()),
+                bitboard!(
+                    "0000000"
+                    "0000000"
+                    "0001000"
+                    "0001000"
+                    "0001000"
+                    "0001000"
+                )
+            );
         }
 
         // slash (/)
@@ -655,14 +676,17 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
-            assert_eq!(Bitboard(white_board.get_won_cells()), bitboard!(
-                "0000000"
-                "0000000"
-                "0000001"
-                "0000010"
-                "0000100"
-                "0001000"
-            ));
+            assert_eq!(
+                Bitboard(white_board.get_won_cells()),
+                bitboard!(
+                    "0000000"
+                    "0000000"
+                    "0000001"
+                    "0000010"
+                    "0000100"
+                    "0001000"
+                )
+            );
         }
 
         // backslash (\)
@@ -671,14 +695,17 @@ mod tests {
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
-            assert_eq!(Bitboard(white_board.get_won_cells()), bitboard!(
-                "0000000"
-                "0000000"
-                "0001000"
-                "0000100"
-                "0000010"
-                "0000001"
-            ));
+            assert_eq!(
+                Bitboard(white_board.get_won_cells()),
+                bitboard!(
+                    "0000000"
+                    "0000000"
+                    "0001000"
+                    "0000100"
+                    "0000010"
+                    "0000001"
+                )
+            );
         }
     }
 

@@ -1,5 +1,5 @@
 use crate::bitboard;
-use crate::bitboard::{BoardInteger};
+use crate::bitboard::BoardInteger;
 use crate::score::*;
 
 type Entry = bitboard::BoardInteger;
