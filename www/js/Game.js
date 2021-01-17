@@ -40,7 +40,16 @@ export default class Game {
 
     drop(column) {
         const ch = String(column + 1);
-        this.setVariation(this.variation + ch);
+        if (!this.canDrop(column)) {
+            throw Error(`Cannot drop in column "${ch}" because it is full`);
+        }
+        this.variation += ch;
+        const row = this.position.getHeight(column);
+        this.position = this.position.drop(column);
+        return {
+            column,
+            row,
+        }
     }
 
     undo() {

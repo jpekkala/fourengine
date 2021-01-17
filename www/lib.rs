@@ -36,6 +36,18 @@ impl JsPosition {
     pub fn can_drop(&self, x: u32) -> bool {
         self.position.drop(x).is_legal()
     }
+
+    #[wasm_bindgen]
+    pub fn drop(&self, x: u32) -> JsPosition {
+        JsPosition {
+            position: self.position.position_after_drop(x).unwrap(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = getHeight)]
+    pub fn get_height(&self, x: u32) -> u32 {
+        self.position.get_height(x)
+    }
 }
 
 #[wasm_bindgen(js_name = Engine)]
