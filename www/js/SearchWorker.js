@@ -1,16 +1,15 @@
 let wasm;
 let engine;
 
-import("fourengine").then(wasmModule => {
+const wasmReady = import("fourengine").then(wasmModule => {
     wasm = wasmModule;
     engine = wasm.init_engine();
+}).catch(error => {
+    postMessage({ error, })
 })
 
-self.onmessage = function (e) {
-    if (!wasm) {
-        postMessage({ error: "wasm not ready" });
-        return;
-    }
+self.onmessage = async function (e) {
+    await wasmReady;
     const { variation } = e.data;
     const start = performance.now();
     const struct = wasm.solve(engine, variation);

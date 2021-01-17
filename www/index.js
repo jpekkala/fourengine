@@ -1,36 +1,29 @@
-import SearchWorker from 'worker-loader!./js/SearchWorker';
-// TODO: This is fetched twice because the web worker also needs it. Figure out how to share it with web worker
-import * as wasm from 'fourengine';
 import Board from './js/Board';
+import Game from './js/Game';
 
-const worker = new SearchWorker();
-worker.addEventListener('message', function(e) {
-    const solution = e.data;
-    console.log('Solution is', solution);
-    setFormDisabled(false);
-
-    let description = '';
-    description += `Score: ${solution.score}<br/>`;
-    description += `Work count: ${solution.workCount}<br/>`;
-    description += `Elapsed time: ${solution.duration} s<br/>`;
-    description += `Nodes per second: ${solution.nps}<br/>`;
-
-    document.getElementById('solution').innerHTML = description;
-});
-
+window.Game = Game;
 
 const div = document.querySelector('#c4_board');
 const board = new Board(div);
 
-window.solve = function(variation) {
+window.solve = async function(variation) {
     document.getElementById('solution').innerHTML = 'Solving...';
     setFormDisabled(true);
-    worker.postMessage({ variation, });
+    try {
+        console.log('Solving variation', variation);
+        const game = new Game(variation);
+        const solution = await game.solve();
+        console.log('Solution is', solution);
+        let description = '';
+        description += `Score: ${solution.score}<br/>`;
+        description += `Work count: ${solution.workCount}<br/>`;
+        description += `Elapsed time: ${solution.duration} s<br/>`;
+        description += `Nodes per second: ${solution.nps}<br/>`;
+        document.getElementById('solution').innerHTML = description;
+    } finally {
+        setFormDisabled(false);
+    }
 }
-
-window.showPosition = function(variation) {
-    wasm.show_position(variation);
-};
 
 window.onSolveButtonClick = function() {
     const variation = document.getElementById('variation').value;

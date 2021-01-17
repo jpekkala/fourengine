@@ -1,8 +1,42 @@
 use wasm_bindgen::prelude::*;
 use fourengine::engine::Engine;
-use fourengine::bitboard::Position;
+use fourengine::bitboard::{Disc, Position};
 use fourengine::score::Score;
 use std::time::Duration;
+
+#[wasm_bindgen(js_name = Position)]
+pub struct JsPosition {
+    position: Position
+}
+
+#[wasm_bindgen(js_class = Position)]
+impl JsPosition {
+    #[wasm_bindgen(constructor)]
+    pub fn new(variation: &str) -> JsPosition {
+        JsPosition {
+            position: Position::from_variation(variation)
+        }
+    }
+
+    #[wasm_bindgen(js_name = getCell)]
+    pub fn get_cell(&self, x: u32, y: u32) -> u32 {
+        match self.position.get_disc_at(x, y) {
+            Disc::White => 1,
+            Disc::Red => 2,
+            Disc::Empty => 0,
+        }
+    }
+
+    #[wasm_bindgen(js_name = hasWon)]
+    pub fn has_won(&self) -> bool {
+        self.position.has_won()
+    }
+
+    #[wasm_bindgen(js_name = canDrop)]
+    pub fn can_drop(&self, x: u32) -> bool {
+        self.position.drop(x).is_legal()
+    }
+}
 
 /// This wrapper exists only for annotating with wasm_bindgen
 #[wasm_bindgen]
