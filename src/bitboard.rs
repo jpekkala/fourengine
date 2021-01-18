@@ -213,13 +213,13 @@ impl Position {
         Position { current, other }
     }
 
-    pub fn from_variation(variation: &str) -> Position {
+    pub fn from_variation(variation: &str) -> Option<Position> {
         let mut position = Position::empty();
         for ch in variation.trim().chars() {
-            let column: u32 = ch.to_digit(10).expect("Expected digit") - 1;
-            position = position.position_after_drop(column).expect("Invalid move");
+            let column: u32 = ch.to_digit(10)? - 1;
+            position = position.position_after_drop(column)?;
         }
-        position
+        Some(position)
     }
 
     /// The reverse of to_string
@@ -544,7 +544,7 @@ mod tests {
 
     #[test]
     fn from_variation() {
-        let position = Position::from_variation("444444");
+        let position = Position::from_variation("444444").unwrap();
         assert_eq!(
             position,
             position!(
@@ -557,7 +557,7 @@ mod tests {
             )
         );
 
-        let position = Position::from_variation("436675553");
+        let position = Position::from_variation("436675553").unwrap();
         assert_eq!(
             position,
             position!(
@@ -573,7 +573,7 @@ mod tests {
 
     #[test]
     fn height() {
-        let position = Position::from_variation("436675553");
+        let position = Position::from_variation("436675553").unwrap();
         assert_eq!(
             position,
             position!(
@@ -596,7 +596,7 @@ mod tests {
 
     #[test]
     fn flip() {
-        let position = Position::from_variation("436675553");
+        let position = Position::from_variation("436675553").unwrap();
         assert_eq!(
             position,
             position!(
@@ -625,7 +625,7 @@ mod tests {
 
     #[test]
     fn invalid_move() {
-        let position = Position::from_variation("444444");
+        let position = Position::from_variation("444444").unwrap();
         assert!(position.position_after_drop(3).is_none());
         assert!(position.position_after_drop(0).is_some());
     }
@@ -634,7 +634,7 @@ mod tests {
     fn win_checking() {
         // horizontal
         {
-            let position = Position::from_variation("4455667");
+            let position = Position::from_variation("4455667").unwrap();
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
@@ -653,7 +653,7 @@ mod tests {
 
         // vertical
         {
-            let position = Position::from_variation("4343434");
+            let position = Position::from_variation("4343434").unwrap();
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
@@ -672,7 +672,7 @@ mod tests {
 
         // slash (/)
         {
-            let position = Position::from_variation("45567667677");
+            let position = Position::from_variation("45567667677").unwrap();
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
@@ -691,7 +691,7 @@ mod tests {
 
         // backslash (\)
         {
-            let position = Position::from_variation("76654554544");
+            let position = Position::from_variation("76654554544").unwrap();
             let (white_board, red_board) = position.get_ordered_boards();
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
@@ -711,14 +711,14 @@ mod tests {
 
     #[test]
     fn threat_counting() {
-        let position = Position::from_variation("43443555");
+        let position = Position::from_variation("43443555").unwrap();
         assert_eq!(position.count_threats(), 2);
         assert_eq!(position.to_other_perspective().count_threats(), 0);
     }
 
     #[test]
     fn position_code() {
-        let position1 = Position::from_variation("43443555");
+        let position1 = Position::from_variation("43443555").unwrap();
         let position_code = position1.to_position_code();
         let position2 = Position::from_position_code(position_code);
         assert_eq!(position1, position2);
@@ -726,7 +726,7 @@ mod tests {
 
     #[test]
     fn even_columns() {
-        let position = Position::from_variation("4455");
+        let position = Position::from_variation("4455").unwrap();
         assert!(position.all_colums_even());
     }
 }

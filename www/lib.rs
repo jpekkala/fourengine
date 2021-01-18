@@ -13,7 +13,7 @@ impl JsPosition {
     #[wasm_bindgen(constructor)]
     pub fn new(variation: &str) -> JsPosition {
         JsPosition {
-            position: Position::from_variation(variation),
+            position: Position::from_variation(variation).unwrap(),
         }
     }
 
@@ -37,9 +37,13 @@ impl JsPosition {
     }
 
     #[wasm_bindgen]
-    pub fn drop(&self, x: u32) -> JsPosition {
-        JsPosition {
-            position: self.position.position_after_drop(x).unwrap(),
+    pub fn drop(&self, x: u32) -> Option<JsPosition> {
+        let new_position = self.position.position_after_drop(x);
+        match new_position {
+            Some(position) => Some(JsPosition {
+                position,
+            }),
+            None => None,
         }
     }
 
@@ -66,7 +70,7 @@ impl JsEngine {
     #[wasm_bindgen]
     pub fn solve(&mut self, variation: &str) -> Solution {
         let mut engine = &mut self.engine;
-        let position = Position::from_variation(variation);
+        let position = Position::from_variation(variation).unwrap();
         engine.set_position(position);
         engine.work_count = 0;
         let score = engine.solve();
