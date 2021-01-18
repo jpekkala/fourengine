@@ -11,11 +11,8 @@ pub struct Engine {
     ply: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 struct Move {
-    /// The column where the disc is dropped
-    x: u32,
-    y: u32,
     new_position: Position,
     priority: i32,
 }
@@ -128,17 +125,23 @@ impl Engine {
             }
         }
 
-        let mut possible_moves = Vec::with_capacity(BOARD_WIDTH as usize);
+        let mut move_array = [Move {
+            new_position: Position::empty(),
+            priority: 0,
+        }; BOARD_WIDTH as usize];
+        let mut move_count = 0;
+
         for x in 0..BOARD_WIDTH {
             let column = (nonlosing_moves.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
             if column != 0 {
-                possible_moves.push(self.create_move(x));
+                move_array[move_count] = self.create_move(x);
+                move_count += 1;
             }
         }
 
+        let mut possible_moves = &mut move_array[0..move_count];
         insertion_sort(&mut possible_moves);
-        // Timsort:
-        // possible_moves.sort_by(|a, b| { b.priority.cmp(&a.priority) });
+
         let old_position = self.position;
         let original_interior_count = self.work_count;
         // If any of the children remains unknown, we may not have an exact score. This can happen
@@ -210,8 +213,6 @@ impl Engine {
         priority += self.heuristic.get_value(x, y);
 
         Move {
-            x,
-            y,
             new_position,
             priority,
         }
@@ -219,9 +220,8 @@ impl Engine {
 }
 
 /// Insertion sort is good when an array is small, which is the case for us because the number of
-/// possible moves is max BOARD_WIDTH. This marginally outperforms the Timsort that Vec::sort uses
-/// internally (but not by much).
-fn insertion_sort(moves: &mut Vec<Move>) {
+/// possible moves is max BOARD_WIDTH.
+fn insertion_sort(moves: &mut &mut [Move]) {
     for i in 1..moves.len() {
         let mut j = i;
         while j > 0 && moves[j - 1].priority < moves[j].priority {
