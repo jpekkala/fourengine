@@ -17,16 +17,20 @@ pub const POSITION_BITS: u32 = (BOARD_HEIGHT + 1) * BOARD_WIDTH;
 /// bigger board sizes are used.
 pub type BoardInteger = u64;
 
-/// Represents the discs of a single player.
+/// The discs of a single player.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Bitboard(pub BoardInteger);
 
-/// Represents the board state of a particular position but not how the position was arrived at.
+/// The board state of a particular position but not how the position was arrived at.
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Position {
     pub current: Bitboard,
     pub other: Bitboard,
 }
+
+/// Available moves as a bitmap where each column can have max 1 bit set.
+#[derive(Copy, Clone)]
+pub struct MoveBitmap(pub BoardInteger);
 
 pub enum Disc {
     White,
@@ -151,10 +155,6 @@ impl Bitboard {
         let diagonal2 = threat_line(board, BIT_HEIGHT - 1);
 
         (vertical | horizontal | diagonal1 | diagonal2) & FULL_BOARD
-    }
-
-    pub fn get_left_half(&self) -> Bitboard {
-        Bitboard(self.0 & LEFT_HALF)
     }
 
     fn get_column_as_first(&self, x: u32) -> BoardInteger {
@@ -350,9 +350,9 @@ impl Position {
         Bitboard(threat_cells & empty_cells)
     }
 
-    pub fn get_immediate_threats(&self) -> Bitboard {
+    pub fn get_immediate_wins(&self) -> MoveBitmap {
         let threat_cells = self.current.get_threat_cells();
-        Bitboard(threat_cells & self.get_height_cells())
+        MoveBitmap(threat_cells & self.get_height_cells())
     }
 
     pub fn count_threats(&self) -> u32 {
@@ -375,10 +375,10 @@ impl Position {
         }
     }
 
-    pub fn get_nonlosing_moves(&self) -> Bitboard {
+    pub fn get_nonlosing_moves(&self) -> MoveBitmap {
         let possible_moves = self.get_height_cells() & FULL_BOARD;
         let enemy_threats = self.to_other_perspective().get_threats();
-        Bitboard(!(enemy_threats.0 >> 1) & possible_moves)
+        MoveBitmap(!(enemy_threats.0 >> 1) & possible_moves)
     }
 
     fn all_colums_even(&self) -> bool {
@@ -402,7 +402,7 @@ impl Position {
     /// The score is returned from the current player's perspective. If there are non-losing moves
     /// in an uneven column, the score cannot be determined and Unknown is returned.
     #[inline(always)]
-    pub fn autofinish_score(&self, nonlosing_moves: Bitboard) -> Score {
+    pub fn autofinish_score(&self, nonlosing_moves: MoveBitmap) -> Score {
         let mut current = self.current.0;
         let mut other = self.other.0;
         let empty = !self.both();
@@ -441,6 +441,16 @@ impl Position {
         } else {
             Score::Draw
         }
+    }
+}
+
+impl MoveBitmap {
+    pub fn has_only_one_move(&self) -> bool {
+        self.0.count_ones() == 1
+    }
+
+    pub fn get_left_half(&self) -> MoveBitmap {
+        MoveBitmap(self.0 & LEFT_HALF)
     }
 }
 

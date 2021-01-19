@@ -1,4 +1,6 @@
-use crate::bitboard::{Bitboard, Position, BIT_HEIGHT, BOARD_HEIGHT, BOARD_WIDTH, FIRST_COLUMN};
+use crate::bitboard::{
+    Bitboard, MoveBitmap, Position, BIT_HEIGHT, BOARD_HEIGHT, BOARD_WIDTH, FIRST_COLUMN,
+};
 use crate::heuristic::{FixedHeuristic, Heuristic};
 use crate::score::Score;
 use crate::trans_table::TransTable;
@@ -19,7 +21,7 @@ struct Move {
 
 enum QuickEvaluation {
     Score(Score),
-    Moves(Bitboard),
+    Moves(MoveBitmap),
 }
 
 impl Engine {
@@ -66,7 +68,7 @@ impl Engine {
             return QuickEvaluation::Score(Score::Loss);
         }
 
-        let immediate_enemy_threats = self.position.to_other_perspective().get_immediate_threats();
+        let immediate_enemy_threats = self.position.to_other_perspective().get_immediate_wins();
 
         let forced_move_count = immediate_enemy_threats.0.count_ones();
         if forced_move_count > 1 {
@@ -98,14 +100,14 @@ impl Engine {
 
         self.work_count += 1;
 
-        let mut nonlosing_moves = match self.quick_evaluate(alpha) {
+        let mut move_bitmap = match self.quick_evaluate(alpha) {
             QuickEvaluation::Score(score) => return score,
             QuickEvaluation::Moves(board) => board,
         };
 
-        if nonlosing_moves.0.count_ones() == 1 {
+        if move_bitmap.has_only_one_move() {
             let old_position = self.position;
-            let new_board = Bitboard(self.position.current.0 | nonlosing_moves.0);
+            let new_board = Bitboard(self.position.current.0 | move_bitmap.0);
             self.position = Position::new(old_position.other, new_board);
             self.ply += 1;
             let score = self
@@ -118,7 +120,7 @@ impl Engine {
 
         let (position_code, symmetric) = self.position.to_normalized_position_code();
         if symmetric {
-            nonlosing_moves = nonlosing_moves.get_left_half();
+            move_bitmap = move_bitmap.get_left_half();
         }
 
         let mut best_score = Score::Loss;
@@ -150,7 +152,7 @@ impl Engine {
         let mut move_count = 0;
 
         for x in 0..BOARD_WIDTH {
-            let column = (nonlosing_moves.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
+            let column = (move_bitmap.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
             if column != 0 {
                 move_array[move_count] = self.create_move(x);
                 move_count += 1;
