@@ -17,6 +17,22 @@ struct Move {
     priority: i32,
 }
 
+struct QuickEvaluation {
+    score: Option<Score>,
+    forced_move: Option<Bitboard>,
+    nonlosing_moves: Option<Bitboard>,
+}
+
+impl QuickEvaluation {
+    fn from_score(score: Score) -> QuickEvaluation {
+        QuickEvaluation {
+            score: Some(score),
+            forced_move: None,
+            nonlosing_moves: None,
+        }
+    }
+}
+
 impl Engine {
     pub fn new() -> Engine {
         Engine {
@@ -50,36 +66,67 @@ impl Engine {
         self.negamax(Score::Loss, Score::Win, 42)
     }
 
-    fn negamax(&mut self, alpha: Score, beta: Score, max_depth: u32) -> Score {
-        debug_assert!(!self.position.has_won(), "Already won");
-
-        self.work_count += 1;
-
+    #[inline(always)]
+    fn evaluate(&self, alpha: Score) -> QuickEvaluation {
         if self.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
-            return Score::Draw;
-        }
-
-        if max_depth == 0 {
-            return Score::Unknown;
+            return QuickEvaluation::from_score(Score::Draw);
         }
 
         let mut nonlosing_moves = self.position.get_nonlosing_moves();
         if nonlosing_moves.0 == 0 {
-            return Score::Loss;
+            return QuickEvaluation::from_score(Score::Loss);
         }
 
         let immediate_enemy_threats = self.position.to_other_perspective().get_immediate_threats();
 
         let forced_move_count = immediate_enemy_threats.0.count_ones();
         if forced_move_count > 1 {
-            return Score::Loss;
+            return QuickEvaluation::from_score(Score::Loss);
         } else if forced_move_count == 1 {
             if immediate_enemy_threats.0 & nonlosing_moves.0 == 0 {
-                return Score::Loss;
+                return QuickEvaluation::from_score(Score::Loss);
             }
 
+            return QuickEvaluation {
+                score: None,
+                nonlosing_moves: None,
+                forced_move: Some(immediate_enemy_threats)
+            };
+        }
+
+        let auto_score = self.position.autofinish_score(nonlosing_moves);
+        if auto_score == Score::Loss {
+            return QuickEvaluation::from_score(Score::Loss);
+        }
+        if auto_score == Score::Draw && alpha == Score::Draw {
+            return QuickEvaluation::from_score(Score::Draw);
+        }
+
+        QuickEvaluation {
+            score: None,
+            nonlosing_moves: Some(nonlosing_moves),
+            forced_move: None,
+        }
+    }
+
+    fn negamax(&mut self, alpha: Score, beta: Score, max_depth: u32) -> Score {
+        debug_assert!(!self.position.has_won(), "Already won");
+
+        if max_depth == 0 {
+            return Score::Unknown;
+        }
+
+        self.work_count += 1;
+
+        let quick = self.evaluate(alpha);
+
+        if let Some(score) = quick.score {
+            return score;
+        }
+
+        if let Some(forced_move) = quick.forced_move {
             let old_position = self.position;
-            let new_board = Bitboard(old_position.current.0 | immediate_enemy_threats.0);
+            let new_board = Bitboard(self.position.current.0 | forced_move.0);
             self.position = Position::new(old_position.other, new_board);
             self.ply += 1;
             let score = self
@@ -90,13 +137,7 @@ impl Engine {
             return score;
         }
 
-        let auto_score = self.position.autofinish_score(nonlosing_moves);
-        if auto_score == Score::Loss {
-            return Score::Loss;
-        }
-        if auto_score == Score::Draw && alpha == Score::Draw {
-            return Score::Draw;
-        }
+        let mut nonlosing_moves = quick.nonlosing_moves.unwrap();
 
         let (position_code, symmetric) = self.position.to_normalized_position_code();
         if symmetric {
