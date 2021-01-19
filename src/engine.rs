@@ -1,5 +1,5 @@
 use crate::bitboard::{
-    Bitboard, MoveBitmap, Position, BIT_HEIGHT, BOARD_HEIGHT, BOARD_WIDTH, FIRST_COLUMN,
+    Bitboard, MoveBitmap, Position, BOARD_HEIGHT, BOARD_WIDTH,
 };
 use crate::heuristic::{FixedHeuristic, Heuristic};
 use crate::score::Score;
@@ -97,7 +97,7 @@ impl Engine {
             return QuickEvaluation::Score(Score::Draw);
         }
 
-        let mut nonlosing_moves = self.position.get_nonlosing_moves();
+        let nonlosing_moves = self.position.get_nonlosing_moves();
         if nonlosing_moves.0 == 0 {
             return QuickEvaluation::Score(Score::Loss);
         }
@@ -144,9 +144,7 @@ impl Engine {
             let new_board = Bitboard(self.position.current.0 | move_bitmap.0);
             self.position = Position::new(old_position.other, new_board);
             self.ply += 1;
-            let score = self
-                .negamax(ab.flip(), max_depth - 1)
-                .flip();
+            let score = self.negamax(ab.flip(), max_depth - 1).flip();
             self.ply -= 1;
             self.position = old_position;
             return score;
@@ -174,7 +172,7 @@ impl Engine {
             }
 
             if ab.has_cutoff() {
-                return trans_score
+                return trans_score;
             }
         }
 
@@ -182,17 +180,8 @@ impl Engine {
             new_position: Position::empty(),
             priority: 0,
         }; BOARD_WIDTH as usize];
-        let mut move_count = 0;
 
-        for x in 0..BOARD_WIDTH {
-            let column = (move_bitmap.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
-            if column != 0 {
-                move_array[move_count] = self.create_move(x);
-                move_count += 1;
-            }
-        }
-
-        let mut possible_moves = &mut move_array[0..move_count];
+        let mut possible_moves = move_bitmap.init_array(&mut move_array, |x| self.create_move(x));
         insertion_sort(&mut possible_moves);
 
         let old_position = self.position;
@@ -204,9 +193,7 @@ impl Engine {
             self.position = m.new_position;
             self.ply += 1;
 
-            let score = self
-                .negamax(ab.flip(), max_depth - 1)
-                .flip();
+            let score = self.negamax(ab.flip(), max_depth - 1).flip();
 
             self.ply -= 1;
 

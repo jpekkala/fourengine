@@ -452,6 +452,32 @@ impl MoveBitmap {
     pub fn get_left_half(&self) -> MoveBitmap {
         MoveBitmap(self.0 & LEFT_HALF)
     }
+
+    /// Initializes the moves represented by this bitmap into an array with a compile-time size.
+    /// Creating move arrays is one of the performance bottlenecks which means that something like
+    /// a Vec is not an option. It is better to allocate an array on the stack and pass its
+    /// reference to this function.
+    ///
+    /// The return value is a slice of the given array where each item corresponds to a valid move.
+    #[inline(always)]
+    pub fn init_array<'a, T, F>(
+        &self,
+        move_array: &'a mut [T; BOARD_WIDTH as usize],
+        f: F,
+    ) -> &'a mut [T]
+    where
+        F: Fn(u32) -> T,
+    {
+        let mut move_count = 0;
+        for x in 0..BOARD_WIDTH {
+            let column = (self.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
+            if column != 0 {
+                move_array[move_count] = f(x);
+                move_count += 1;
+            }
+        }
+        &mut move_array[0..move_count]
+    }
 }
 
 impl fmt::Display for Bitboard {
