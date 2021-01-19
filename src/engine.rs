@@ -19,7 +19,6 @@ struct Move {
 
 struct QuickEvaluation {
     score: Option<Score>,
-    forced_move: Option<Bitboard>,
     nonlosing_moves: Option<Bitboard>,
 }
 
@@ -27,7 +26,6 @@ impl QuickEvaluation {
     fn from_score(score: Score) -> QuickEvaluation {
         QuickEvaluation {
             score: Some(score),
-            forced_move: None,
             nonlosing_moves: None,
         }
     }
@@ -89,8 +87,7 @@ impl Engine {
 
             return QuickEvaluation {
                 score: None,
-                nonlosing_moves: None,
-                forced_move: Some(immediate_enemy_threats)
+                nonlosing_moves: Some(immediate_enemy_threats)
             };
         }
 
@@ -105,7 +102,6 @@ impl Engine {
         QuickEvaluation {
             score: None,
             nonlosing_moves: Some(nonlosing_moves),
-            forced_move: None,
         }
     }
 
@@ -119,14 +115,15 @@ impl Engine {
         self.work_count += 1;
 
         let quick = self.evaluate(alpha);
-
         if let Some(score) = quick.score {
             return score;
         }
 
-        if let Some(forced_move) = quick.forced_move {
+        let mut nonlosing_moves = quick.nonlosing_moves.unwrap();
+
+        if nonlosing_moves.0.count_ones() == 1 {
             let old_position = self.position;
-            let new_board = Bitboard(self.position.current.0 | forced_move.0);
+            let new_board = Bitboard(self.position.current.0 | nonlosing_moves.0);
             self.position = Position::new(old_position.other, new_board);
             self.ply += 1;
             let score = self
@@ -136,8 +133,6 @@ impl Engine {
             self.position = old_position;
             return score;
         }
-
-        let mut nonlosing_moves = quick.nonlosing_moves.unwrap();
 
         let (position_code, symmetric) = self.position.to_normalized_position_code();
         if symmetric {
