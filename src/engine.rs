@@ -24,6 +24,40 @@ enum QuickEvaluation {
     Moves(MoveBitmap),
 }
 
+#[derive(Clone, Copy)]
+struct AlphaBeta {
+    alpha: Score,
+    beta: Score,
+}
+
+impl AlphaBeta {
+    fn new() -> AlphaBeta {
+        AlphaBeta {
+            alpha: Score::Loss,
+            beta: Score::Win,
+        }
+    }
+
+    fn flip(&self) -> AlphaBeta {
+        AlphaBeta {
+            alpha: self.beta.flip(),
+            beta: self.alpha.flip(),
+        }
+    }
+
+    fn has_cutoff(&self) -> bool {
+        self.alpha >= self.beta
+    }
+
+    fn narrow_alpha(&mut self, score: Score) {
+        if score == Score::Win {
+            self.alpha = Score::Win
+        } else if score == Score::Draw || score == Score::DrawOrWin {
+            self.alpha = Score::Draw;
+        }
+    }
+}
+
 impl Engine {
     pub fn new() -> Engine {
         Engine {
@@ -54,11 +88,11 @@ impl Engine {
                 return Score::Win;
             }
         }
-        self.negamax(Score::Loss, Score::Win, 42)
+        self.negamax(AlphaBeta::new(), 42)
     }
 
     #[inline(always)]
-    fn quick_evaluate(&self, alpha: Score) -> QuickEvaluation {
+    fn quick_evaluate(&self, ab: &AlphaBeta) -> QuickEvaluation {
         if self.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
             return QuickEvaluation::Score(Score::Draw);
         }
@@ -84,14 +118,14 @@ impl Engine {
         if auto_score == Score::Loss {
             return QuickEvaluation::Score(Score::Loss);
         }
-        if auto_score == Score::Draw && alpha == Score::Draw {
+        if auto_score == Score::Draw && ab.alpha == Score::Draw {
             return QuickEvaluation::Score(Score::Draw);
         }
 
         QuickEvaluation::Moves(nonlosing_moves)
     }
 
-    fn negamax(&mut self, alpha: Score, beta: Score, max_depth: u32) -> Score {
+    fn negamax(&mut self, ab: AlphaBeta, max_depth: u32) -> Score {
         debug_assert!(!self.position.has_won(), "Already won");
 
         if max_depth == 0 {
@@ -100,7 +134,7 @@ impl Engine {
 
         self.work_count += 1;
 
-        let mut move_bitmap = match self.quick_evaluate(alpha) {
+        let mut move_bitmap = match self.quick_evaluate(&ab) {
             QuickEvaluation::Score(score) => return score,
             QuickEvaluation::Moves(board) => board,
         };
@@ -111,7 +145,7 @@ impl Engine {
             self.position = Position::new(old_position.other, new_board);
             self.ply += 1;
             let score = self
-                .negamax(beta.flip(), alpha.flip(), max_depth - 1)
+                .negamax(ab.flip(), max_depth - 1)
                 .flip();
             self.ply -= 1;
             self.position = old_position;
@@ -123,9 +157,8 @@ impl Engine {
             move_bitmap = move_bitmap.get_left_half();
         }
 
+        let mut ab = ab.clone();
         let mut best_score = Score::Loss;
-        let mut new_alpha = alpha;
-        let mut new_beta = beta;
 
         let trans_score = self.trans_table.fetch(position_code);
         if trans_score.is_exact() {
@@ -134,14 +167,14 @@ impl Engine {
 
         if trans_score != Score::Unknown {
             if trans_score == Score::DrawOrWin {
-                new_alpha = Score::Draw;
+                ab.alpha = Score::Draw;
                 best_score = Score::Draw;
             } else if trans_score == Score::DrawOrLoss {
-                new_beta = Score::Draw;
+                ab.beta = Score::Draw;
             }
 
-            if new_alpha == new_beta {
-                return trans_score;
+            if ab.has_cutoff() {
+                return trans_score
             }
         }
 
@@ -172,7 +205,7 @@ impl Engine {
             self.ply += 1;
 
             let score = self
-                .negamax(new_beta.flip(), new_alpha.flip(), max_depth - 1)
+                .negamax(ab.flip(), max_depth - 1)
                 .flip();
 
             self.ply -= 1;
@@ -182,21 +215,12 @@ impl Engine {
             }
 
             if score > best_score {
-                if score == Score::Win {
-                    new_alpha = Score::Win
-                } else if score == Score::Draw || score == Score::DrawOrWin {
-                    new_alpha = Score::Draw;
-                }
-
+                ab.narrow_alpha(score);
                 best_score = score;
-            }
 
-            if new_alpha >= new_beta {
-                break;
-            }
-
-            if best_score == Score::Win {
-                break;
+                if ab.has_cutoff() {
+                    break;
+                }
             }
         }
         self.position = old_position;
