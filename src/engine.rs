@@ -17,18 +17,9 @@ struct Move {
     priority: i32,
 }
 
-struct QuickEvaluation {
-    score: Option<Score>,
-    nonlosing_moves: Option<Bitboard>,
-}
-
-impl QuickEvaluation {
-    fn from_score(score: Score) -> QuickEvaluation {
-        QuickEvaluation {
-            score: Some(score),
-            nonlosing_moves: None,
-        }
-    }
+enum QuickEvaluation {
+    Score(Score),
+    Moves(Bitboard),
 }
 
 impl Engine {
@@ -65,44 +56,37 @@ impl Engine {
     }
 
     #[inline(always)]
-    fn evaluate(&self, alpha: Score) -> QuickEvaluation {
+    fn quick_evaluate(&self, alpha: Score) -> QuickEvaluation {
         if self.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
-            return QuickEvaluation::from_score(Score::Draw);
+            return QuickEvaluation::Score(Score::Draw);
         }
 
         let mut nonlosing_moves = self.position.get_nonlosing_moves();
         if nonlosing_moves.0 == 0 {
-            return QuickEvaluation::from_score(Score::Loss);
+            return QuickEvaluation::Score(Score::Loss);
         }
 
         let immediate_enemy_threats = self.position.to_other_perspective().get_immediate_threats();
 
         let forced_move_count = immediate_enemy_threats.0.count_ones();
         if forced_move_count > 1 {
-            return QuickEvaluation::from_score(Score::Loss);
+            return QuickEvaluation::Score(Score::Loss);
         } else if forced_move_count == 1 {
             if immediate_enemy_threats.0 & nonlosing_moves.0 == 0 {
-                return QuickEvaluation::from_score(Score::Loss);
+                return QuickEvaluation::Score(Score::Loss);
             }
-
-            return QuickEvaluation {
-                score: None,
-                nonlosing_moves: Some(immediate_enemy_threats)
-            };
+            return QuickEvaluation::Moves(immediate_enemy_threats);
         }
 
         let auto_score = self.position.autofinish_score(nonlosing_moves);
         if auto_score == Score::Loss {
-            return QuickEvaluation::from_score(Score::Loss);
+            return QuickEvaluation::Score(Score::Loss);
         }
         if auto_score == Score::Draw && alpha == Score::Draw {
-            return QuickEvaluation::from_score(Score::Draw);
+            return QuickEvaluation::Score(Score::Draw);
         }
 
-        QuickEvaluation {
-            score: None,
-            nonlosing_moves: Some(nonlosing_moves),
-        }
+        QuickEvaluation::Moves(nonlosing_moves)
     }
 
     fn negamax(&mut self, alpha: Score, beta: Score, max_depth: u32) -> Score {
@@ -114,12 +98,10 @@ impl Engine {
 
         self.work_count += 1;
 
-        let quick = self.evaluate(alpha);
-        if let Some(score) = quick.score {
-            return score;
-        }
-
-        let mut nonlosing_moves = quick.nonlosing_moves.unwrap();
+        let mut nonlosing_moves = match self.quick_evaluate(alpha) {
+            QuickEvaluation::Score(score) => return score,
+            QuickEvaluation::Moves(board) => board,
+        };
 
         if nonlosing_moves.0.count_ones() == 1 {
             let old_position = self.position;
