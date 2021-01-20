@@ -1,7 +1,8 @@
 use crate::bitboard::Position;
-use crate::engine::Engine;
+use crate::engine::{explore_tree, Engine};
 use crate::score::Score;
 use clap::{App, Arg};
+use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
@@ -20,29 +21,52 @@ struct Benchmark {
 }
 
 impl Benchmark {
+    fn run(engine: &mut Engine) -> Benchmark {
+        let start_work = engine.work_count;
+        let start_time = Instant::now();
+        let score = engine.solve();
+        let duration = start_time.elapsed();
+        let work_count = engine.work_count - start_work;
+
+        Benchmark {
+            score,
+            duration,
+            work_count,
+        }
+    }
+
+    fn empty() -> Benchmark {
+        Benchmark {
+            score: Score::Unknown,
+            duration: Duration::from_secs(0),
+            work_count: 0,
+        }
+    }
+
+    fn add(&self, other: Benchmark) -> Benchmark {
+        Benchmark {
+            score: self.score,
+            duration: self.duration + other.duration,
+            work_count: self.work_count + other.work_count,
+        }
+    }
+
+    fn nodes_per_second(&self) -> u32 {
+        (self.work_count as f64 / self.duration.as_secs_f64()) as u32
+    }
+
     fn print(&self) {
         println!("The score is {:?}", self.score);
         println!("Work count is {}", self.work_count);
         println!("Elapsed time is {:?}", self.duration);
-        println!(
-            "Nodes per second: {}",
-            self.work_count as f64 / self.duration.as_secs_f64()
-        );
+        println!("Nodes per second: {}", self.nodes_per_second());
     }
 }
 
 fn run_variation(engine: &mut Engine, variation: &str) -> Result<Benchmark, String> {
     let position = Position::from_variation(&variation).ok_or("Invalid variation")?;
     engine.set_position(position);
-    let start = Instant::now();
-    let score = engine.solve();
-    let duration = start.elapsed();
-
-    Ok(Benchmark {
-        score,
-        duration,
-        work_count: engine.work_count,
-    })
+    Ok(Benchmark::run(engine))
 }
 
 fn run_test_file(filename: &str) -> Result<(), String> {
@@ -104,6 +128,43 @@ fn parse_line(line: String) -> Option<(String, Score)> {
     Some((variation, score))
 }
 
+fn generate() {
+    let mut set = HashSet::new();
+    explore_tree(Position::empty(), 8, &mut |pos| {
+        let (pos, _symmetric) = pos.normalize();
+        let code = pos.to_position_code();
+        let is_immediate_win = pos.get_immediate_wins().count_moves() > 0;
+        let is_forced = pos
+            .to_other_perspective()
+            .get_immediate_wins()
+            .count_moves()
+            > 0;
+        if !pos.has_won() && !is_immediate_win && !is_forced {
+            set.insert(code);
+        }
+    });
+    let total_count = set.len();
+    println!("{} total positions", total_count);
+
+    let mut total_benchmark = Benchmark::empty();
+    let mut engine = Engine::new();
+    let mut count = 0;
+    explore_tree(Position::empty(), 8, &mut |pos| {
+        count += 1;
+        engine.set_position(pos);
+        let benchmark = Benchmark::run(&mut engine);
+        total_benchmark = total_benchmark.add(benchmark);
+        if count % 10 == 0 {
+            println!(
+                "Solved {} out of {}. Speed is {} nodes per second",
+                count,
+                total_count,
+                total_benchmark.nodes_per_second()
+            );
+        }
+    });
+}
+
 fn main() {
     let matches = App::new("Fourengine")
         .version("1.0")
@@ -122,10 +183,13 @@ fn main() {
                 .about("Runs a specific variation")
                 .takes_value(true),
         )
+        .arg(Arg::new("generate").long("generate"))
         .get_matches();
 
     if let Some(test_file) = matches.value_of("test_file") {
         run_test_file(test_file).expect("Cannot read file");
+    } else if matches.is_present("generate") {
+        generate();
     } else {
         let variation = match matches.value_of("variation") {
             Some(variation) => String::from(variation),

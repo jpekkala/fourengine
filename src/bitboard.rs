@@ -445,6 +445,9 @@ impl Position {
 }
 
 impl MoveBitmap {
+    pub fn count_moves(&self) -> u32 {
+        self.0.count_ones()
+    }
     pub fn has_only_one_move(&self) -> bool {
         self.0.count_ones() == 1
     }

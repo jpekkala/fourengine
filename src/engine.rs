@@ -1,6 +1,4 @@
-use crate::bitboard::{
-    Bitboard, MoveBitmap, Position, BOARD_HEIGHT, BOARD_WIDTH,
-};
+use crate::bitboard::{Bitboard, MoveBitmap, Position, BOARD_HEIGHT, BOARD_WIDTH};
 use crate::heuristic::{FixedHeuristic, Heuristic};
 use crate::score::Score;
 use crate::trans_table::TransTable;
@@ -259,5 +257,30 @@ fn insertion_sort(moves: &mut &mut [Move]) {
             moves.swap(j - 1, j);
             j -= 1;
         }
+    }
+}
+
+pub fn explore_tree<F>(position: Position, max_depth: u32, f: &mut F)
+where
+    F: FnMut(Position),
+{
+    if max_depth == 0 {
+        f(position);
+        return;
+    }
+
+    let mut move_bitmap = position.get_nonlosing_moves();
+    let (_position_code, symmetric) = position.to_normalized_position_code();
+    if symmetric {
+        move_bitmap = move_bitmap.get_left_half();
+    }
+
+    let mut move_array = [Position::empty(); BOARD_WIDTH as usize];
+    let possible_moves = move_bitmap.init_array(&mut move_array, |x| {
+        position.position_after_drop(x).unwrap()
+    });
+
+    for m in possible_moves {
+        explore_tree(*m, max_depth - 1, f);
     }
 }
