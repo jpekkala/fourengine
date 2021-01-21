@@ -90,19 +90,15 @@ impl Engine {
     }
 
     #[inline(always)]
-    fn quick_evaluate(&self, ab: &AlphaBeta) -> QuickEvaluation {
-        if self.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
-            return QuickEvaluation::Score(Score::Draw);
-        }
-
-        let nonlosing_moves = self.position.get_nonlosing_moves();
+    fn quick_evaluate(&self, position: &Position, ab: &AlphaBeta) -> QuickEvaluation {
+        let nonlosing_moves = position.get_nonlosing_moves();
         if nonlosing_moves.0 == 0 {
             return QuickEvaluation::Score(Score::Loss);
         }
 
-        let immediate_enemy_threats = self.position.to_other_perspective().get_immediate_wins();
+        let immediate_enemy_threats = position.to_other_perspective().get_immediate_wins();
 
-        let forced_move_count = immediate_enemy_threats.0.count_ones();
+        let forced_move_count = immediate_enemy_threats.count_moves();
         if forced_move_count > 1 {
             return QuickEvaluation::Score(Score::Loss);
         } else if forced_move_count == 1 {
@@ -112,7 +108,7 @@ impl Engine {
             return QuickEvaluation::Moves(immediate_enemy_threats);
         }
 
-        let auto_score = self.position.autofinish_score(nonlosing_moves);
+        let auto_score = position.autofinish_score(nonlosing_moves);
         if auto_score == Score::Loss {
             return QuickEvaluation::Score(Score::Loss);
         }
@@ -126,18 +122,23 @@ impl Engine {
     fn negamax(&mut self, ab: AlphaBeta, max_depth: u32) -> Score {
         debug_assert!(!self.position.has_won(), "Already won");
 
+        if self.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
+            return Score::Draw;
+        }
+
         if max_depth == 0 {
             return Score::Unknown;
         }
 
         self.work_count += 1;
 
-        let mut move_bitmap = match self.quick_evaluate(&ab) {
+        let mut move_bitmap = match self.quick_evaluate(&self.position, &ab) {
             QuickEvaluation::Score(score) => return score,
             QuickEvaluation::Moves(board) => board,
         };
 
-        if move_bitmap.has_only_one_move() {
+        // forced move
+        if move_bitmap.count_moves() == 1 {
             let old_position = self.position;
             let new_board = Bitboard(self.position.current.0 | move_bitmap.0);
             self.position = Position::new(old_position.other, new_board);
@@ -151,6 +152,21 @@ impl Engine {
         let (position_code, symmetric) = self.position.to_normalized_position_code();
         if symmetric {
             move_bitmap = move_bitmap.get_left_half();
+        }
+        for x in 0..BOARD_WIDTH {
+            if move_bitmap.has_move(x) {
+                let new_position = self.position.position_after_drop(x).unwrap();
+                let quick_evaluation = self.quick_evaluate(&new_position, &ab.flip());
+                if let QuickEvaluation::Score(score) = quick_evaluation {
+                    if score == Score::Loss {
+                        return Score::Win;
+                    } else if score == Score::Draw {
+                        if ab.beta == Score::Draw {
+                            return Score::Draw;
+                        }
+                    }
+                }
+            }
         }
 
         let mut ab = ab.clone();

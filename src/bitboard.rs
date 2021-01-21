@@ -420,6 +420,7 @@ impl Position {
         // been filled
         current = current | ((heights ^ nonlosing_moves.0) & FULL_BOARD);
 
+        // TODO: ignore wins that come after enemy win
         if Bitboard(current).has_won() {
             return Score::Unknown;
         }
@@ -439,12 +440,15 @@ impl MoveBitmap {
     pub fn count_moves(&self) -> u32 {
         self.0.count_ones()
     }
-    pub fn has_only_one_move(&self) -> bool {
-        self.0.count_ones() == 1
-    }
 
     pub fn get_left_half(&self) -> MoveBitmap {
         MoveBitmap(self.0 & LEFT_HALF)
+    }
+
+    #[inline]
+    pub fn has_move(&self, column: u32) -> bool {
+        let column_bits = (self.0 >> (column * BIT_HEIGHT)) & FIRST_COLUMN;
+        column_bits != 0
     }
 
     /// Initializes the moves represented by this bitmap into an array with a compile-time size.
@@ -464,8 +468,7 @@ impl MoveBitmap {
     {
         let mut move_count = 0;
         for x in 0..BOARD_WIDTH {
-            let column = (self.0 >> (x * BIT_HEIGHT)) & FIRST_COLUMN;
-            if column != 0 {
+            if self.has_move(x) {
                 move_array[move_count] = f(x);
                 move_count += 1;
             }
