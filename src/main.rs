@@ -58,9 +58,19 @@ impl Benchmark {
     fn print(&self) {
         let width = 8;
         println!("The score is {:?}", self.score);
-        println!("Work: {}", format_large_number(self.work_count as f64, width));
-        println!("Time: {:>width$.3} s", self.duration.as_secs_f64(), width = width);
-        println!("Speed: {}/s", format_large_number(self.get_speed(), width - 1));
+        println!(
+            "Work: {}",
+            format_large_number(self.work_count as f64, width)
+        );
+        println!(
+            "Time: {:>width$.3} s",
+            self.duration.as_secs_f64(),
+            width = width
+        );
+        println!(
+            "Speed: {}/s",
+            format_large_number(self.get_speed(), width - 1)
+        );
 
         fn format_large_number(n: f64, width: usize) -> String {
             if n < 100_000.0 {
@@ -212,9 +222,15 @@ fn main() {
             }
         };
 
+        let position = Position::from_variation(&variation).unwrap();
         println!(
-            "The board is\n{}",
-            Position::from_variation(&variation).unwrap()
+            "The board is ({} moves next)\n{}",
+            if position.get_ply() % 2 == 0 {
+                "white"
+            } else {
+                "red"
+            },
+            position,
         );
         println!("Solving...");
         let mut engine = Engine::new();

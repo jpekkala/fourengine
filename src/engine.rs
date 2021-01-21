@@ -119,8 +119,42 @@ impl Engine {
         QuickEvaluation::Moves(nonlosing_moves)
     }
 
+    #[cfg(debug_assertions)]
+    fn require_precondition(&self, assertion: bool, message: &str) {
+        if !assertion {
+            let white_moves = self.position.get_ply() % 2 == 0;
+            println!(
+                "Panicking at position ({} moves next):\n{}",
+                if white_moves { "white" } else { "red" },
+                self.position
+            );
+            panic!("{}", message);
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    fn check_negamax_preconditions(&self) {
+        self.require_precondition(
+            !self.position.has_won(),
+            "Position should not have any wins",
+        );
+        self.require_precondition(
+            self.position.get_immediate_wins().count_moves() == 0,
+            "Current player should not have any immediately winning moves",
+        );
+        self.require_precondition(
+            self.ply == self.position.get_ply(),
+            "Engine ply should not be out of sync",
+        );
+        self.require_precondition(
+            self.ply < BOARD_WIDTH * BOARD_HEIGHT,
+            "Game should not have ended",
+        );
+    }
+
     fn negamax(&mut self, ab: AlphaBeta, max_depth: u32) -> Score {
-        debug_assert!(!self.position.has_won(), "Already won");
+        #[cfg(debug_assertions)]
+        self.check_negamax_preconditions();
 
         if self.ply == BOARD_WIDTH * BOARD_HEIGHT - 1 {
             return Score::Draw;

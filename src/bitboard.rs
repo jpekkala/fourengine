@@ -366,10 +366,11 @@ impl Position {
         }
     }
 
+    /// Returns all moves where the opponent does not have a threat directly above.
     pub fn get_nonlosing_moves(&self) -> MoveBitmap {
-        let possible_moves = self.get_height_cells() & FULL_BOARD;
+        let legal_moves = self.get_height_cells() & FULL_BOARD;
         let enemy_threats = self.to_other_perspective().get_threats();
-        MoveBitmap(!(enemy_threats.0 >> 1) & possible_moves)
+        MoveBitmap(!(enemy_threats.0 >> 1) & legal_moves)
     }
 
     fn all_colums_even(&self) -> bool {
