@@ -51,15 +51,24 @@ impl Benchmark {
         }
     }
 
-    fn nodes_per_second(&self) -> u32 {
-        (self.work_count as f64 / self.duration.as_secs_f64()) as u32
+    fn get_speed(&self) -> f64 {
+        self.work_count as f64 / self.duration.as_secs_f64()
     }
 
     fn print(&self) {
+        let width = 8;
         println!("The score is {:?}", self.score);
-        println!("Work count is {}", self.work_count);
-        println!("Elapsed time is {:?}", self.duration);
-        println!("Nodes per second: {}", self.nodes_per_second());
+        println!("Work: {}", format_large_number(self.work_count as f64, width));
+        println!("Time: {:>width$.3} s", self.duration.as_secs_f64(), width = width);
+        println!("Speed: {}/s", format_large_number(self.get_speed(), width - 1));
+
+        fn format_large_number(n: f64, width: usize) -> String {
+            if n < 100_000.0 {
+                format!("{:>width$}", n, width = width)
+            } else {
+                format!("{:>width$.3} M", n / 1_000_000.0, width = width)
+            }
+        }
     }
 }
 
@@ -159,7 +168,7 @@ fn generate() {
                 "Solved {} out of {}. Speed is {} nodes per second",
                 count,
                 total_count,
-                total_benchmark.nodes_per_second()
+                total_benchmark.get_speed()
             );
         }
     });
