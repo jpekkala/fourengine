@@ -34,6 +34,10 @@ export default class Game {
         return this.position.hasWon();
     }
 
+    isWinningCell(x, y) {
+        return this.position.isWinningCell(x, y);
+    }
+
     canDrop(column) {
         return this.position.canDrop(column);
     }

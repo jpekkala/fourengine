@@ -17,7 +17,7 @@ export default class Board {
         return this.game.getCellMatrix();
     }
 
-    getSvgDisc({ column, row, animate, animationSettings = {} }) {
+    getSvgDisc({ column, row, animate, transformDiscs = true, animationSettings = {} }) {
         const value = this.position[column * this.rows + row];
         if (!value) return;
         const axis = this.cellSize / 2;
@@ -53,10 +53,28 @@ export default class Board {
                 begin: `${svgTime}s`,
                 fill: 'freeze'
             })
+
+            if (transformDiscs) {
+                animation.onend = () => {
+                    this.transformDiscs();
+                }
+            }
+
             circle.appendChild(animation);
         }
 
         return circle;
+    }
+
+    transformDiscs() {
+        if (!this.game.hasWon()) return;
+        for (let x = 0; x < this.cols; x++) {
+            for (let y = 0; y < this.rows; y++) {
+                if (!this.game.isWinningCell(x, y)) continue;
+                const cell = this.container.querySelector(`#disc_${x}${y}`);
+                cell.setAttributeNS(null, 'fill', 'url(#winning_disc)');
+            }
+        }
     }
 
     drawBoard() {
@@ -66,9 +84,10 @@ export default class Board {
         const axis = this.cellSize / 2;
         const skewY = this.cellSize / 10;
         const skewX = -skewY;
+        const borderWidth = Math.round(axis/2);
 
-        const board = this.stringToHTML(`
-            <div style="width:${width}px;height:${height}px;margin-top:20px;border:${Math.round(axis/2)}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
+        const board = this.stringToHTML(`<div>
+            <div style="width:${width}px;height:${height}px;margin-top:20px;border:${borderWidth}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
                 <svg width="${width}px" viewBox="0 0 ${width} ${height}" id="svg_view">
                     <defs>
                         <pattern id="grid_pattern" patternUnits="userSpaceOnUse" width="${this.cellSize}" height="${this.cellSize}">
@@ -92,7 +111,8 @@ export default class Board {
                         </radialGradient>
                     </defs>
                 </svg>
-            </div>`);
+            </div>
+        </div>`);
         this.container.appendChild(board);
         this.svgView = board.querySelector('#svg_view');
 
@@ -126,7 +146,7 @@ export default class Board {
     }
 
     mouseHandler(column, e) {
-        if (this.solving) return;
+        if (this.solving || this.game.hasWon()) return;
 
         if (e.which === 1) {
             console.log(`Clicked column ${column}`);

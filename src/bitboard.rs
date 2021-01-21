@@ -104,7 +104,7 @@ impl Bitboard {
         result != 0
     }
 
-    fn get_won_cells(&self) -> BoardInteger {
+    pub fn get_won_cells(&self) -> BoardInteger {
         let board = self.0;
         let vertical = board & (board >> 1);
         let horizontal = board & (board >> BIT_HEIGHT);

@@ -1,4 +1,4 @@
-use fourengine::bitboard::{Disc, Position};
+use fourengine::bitboard::{Bitboard, Disc, Position};
 use fourengine::engine::Engine;
 use fourengine::score::Score;
 use wasm_bindgen::prelude::*;
@@ -29,6 +29,13 @@ impl JsPosition {
     #[wasm_bindgen(js_name = hasWon)]
     pub fn has_won(&self) -> bool {
         self.position.has_won()
+    }
+
+    #[wasm_bindgen(js_name = isWinningCell)]
+    pub fn is_winning_cell(&self, x: u32, y: u32) -> bool {
+        let board = Bitboard(self.position.other.get_won_cells());
+        // return board.to_string()
+        board.has_disc(x, y)
     }
 
     #[wasm_bindgen(js_name = canDrop)]
