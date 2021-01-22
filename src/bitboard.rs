@@ -54,16 +54,6 @@ const LEFT_HALF: BoardInteger = FIRST_COLUMN
 const ODD_ROWS: BoardInteger = BOTTOM_ROW * 0b010101;
 const EVEN_ROWS: BoardInteger = BOTTOM_ROW * 0b101010;
 
-const VERTICAL_LINE: BoardInteger = 0b1111;
-const HORIZONTAL_LINE: BoardInteger =
-    1 | (1 << BIT_HEIGHT) | (1 << 2 * BIT_HEIGHT) | (1 << 3 * BIT_HEIGHT);
-const SLASH_LINE: BoardInteger =
-    1 | (1 << (BIT_HEIGHT + 1)) | (1 << (2 * BIT_HEIGHT + 2)) | (1 << (3 * BIT_HEIGHT + 3));
-const BACKSLASH_LINE: BoardInteger =
-    1 | (1 << (BIT_HEIGHT - 1)) | (1 << (2 * BIT_HEIGHT - 2)) | (1 << (3 * BIT_HEIGHT - 3));
-
-// const SLASH_LINE: BoardInteger = 1 | (BIT_HEIGHT + 2) | (2 * BIT_HEIGHT + 3) | (3 * BIT_HEIGHT + 4);
-
 impl Bitboard {
     pub fn empty() -> Bitboard {
         Bitboard(0)
@@ -105,19 +95,20 @@ impl Bitboard {
     }
 
     pub fn get_won_cells(&self) -> BoardInteger {
+        fn win_line(board: BoardInteger, shift_amount: u32) -> BoardInteger {
+            let half = board & (board >> shift_amount);
+            let fourth = half & (half >> 2 * shift_amount);
+            let helper = fourth | (fourth << shift_amount);
+            helper | (helper << 2 * shift_amount)
+        }
+
         let board = self.0;
-        let vertical = board & (board >> 1);
-        let horizontal = board & (board >> BIT_HEIGHT);
+        let vertical = win_line(board, 1);
+        let horizontal = win_line(board, BIT_HEIGHT);
+        let slash = win_line(board, BIT_HEIGHT + 1);
+        let backslash = win_line(board, BIT_HEIGHT - 1);
 
-        const SLASH_SHIFT: u32 = BIT_HEIGHT + 1;
-        const BACKSLASH_SHIFT: u32 = BIT_HEIGHT - 1;
-        let slash = board & (board >> SLASH_SHIFT);
-        let backslash = board & (board >> BACKSLASH_SHIFT);
-
-        (vertical & (vertical >> 2)) * VERTICAL_LINE
-            | (horizontal & (horizontal >> 2 * BIT_HEIGHT)) * HORIZONTAL_LINE
-            | (slash & (slash >> 2 * SLASH_SHIFT)) * SLASH_LINE
-            | (backslash & (backslash >> 2 * BACKSLASH_SHIFT)) * BACKSLASH_LINE
+        vertical | horizontal | slash | backslash
     }
 
     pub fn is_legal(&self) -> bool {
@@ -743,6 +734,26 @@ mod tests {
                     "0000100"
                     "0000010"
                     "0000001"
+                )
+            );
+        }
+
+        // five in a row
+        {
+            let position = Position::from_variation("112233554").unwrap();
+            let (white_board, red_board) = position.get_ordered_boards();
+            println!("{}", Bitboard(white_board.get_won_cells()));
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+            assert_eq!(
+                Bitboard(white_board.get_won_cells()),
+                bitboard!(
+                    "0000000"
+                    "0000000"
+                    "0000000"
+                    "0000000"
+                    "0000000"
+                    "1111100"
                 )
             );
         }

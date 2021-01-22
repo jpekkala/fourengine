@@ -149,7 +149,7 @@ fn closest_power_of_two(number: BoardInteger) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bitboard::BoardInteger;
+    use crate::bitboard::{BoardInteger, Position};
 
     #[test]
     fn validate_masks() {
@@ -166,7 +166,7 @@ mod tests {
     fn remember_stored_value() {
         let mut tt = TransTable::new(1021);
 
-        let position = Position::from_variation("4444");
+        let position = Position::from_variation("4444").unwrap();
         tt.store(position.to_position_code(), Score::Win, 0);
         assert_eq!(tt.stored_count, 1);
         assert_eq!(tt.fetch(position.to_position_code()), Score::Win);
