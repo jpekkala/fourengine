@@ -10,6 +10,7 @@ export default class Board {
         this.boardColor = options.boardColor || 'black';
         this.animationSpeedMs = options.animationSpeedMs || 200;
         this.game = new Game(options.variation);
+        this.animating = 0;
         this.drawBoard();
     }
 
@@ -17,7 +18,7 @@ export default class Board {
         return this.game.getCellMatrix();
     }
 
-    getSvgDisc({ column, row, animate, transformDiscs = true, animationSettings = {} }) {
+    getSvgDisc({ column, row, animate, animationSettings = {} }) {
         const value = this.position[column * this.rows + row];
         if (!value) return;
         const axis = this.cellSize / 2;
@@ -54,20 +55,20 @@ export default class Board {
                 fill: 'freeze'
             })
 
-            if (transformDiscs) {
-                animation.onend = () => {
-                    this.transformDiscs();
-                }
+            animation.onend = () => {
+                this.animating--;
+                this.transformDiscs();
             }
 
             circle.appendChild(animation);
+            this.animating++;
         }
 
         return circle;
     }
 
     transformDiscs() {
-        if (!this.game.hasWon()) return;
+        if (!this.game.hasWon() || this.animating) return;
         for (let x = 0; x < this.cols; x++) {
             for (let y = 0; y < this.rows; y++) {
                 if (!this.game.isWinningCell(x, y)) continue;
@@ -161,6 +162,7 @@ export default class Board {
         document.getElementById('solution').innerHTML = 'Solving...';
         try {
             const solution = await this.game.solve();
+            this.transformDiscs();
             console.log('Solution is', solution);
             let description = '';
             description += `Score: ${solution.score}<br/>`;
