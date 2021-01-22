@@ -405,8 +405,9 @@ impl Position {
             return Score::Unknown;
         }
 
-        // set highest bit for each non-losing column
+        // highest bit set for each non-losing column
         let nonlosing_columns = (FULL_BOARD + nonlosing_moves.0) & BUFFER_ROW;
+        // highest bit set for each losing column
         let losing_columns = nonlosing_columns ^ BUFFER_ROW;
 
         // the same as FULL_BOARD except that losing columns are full zeroes
@@ -421,9 +422,27 @@ impl Position {
         // been filled
         current = current | ((heights ^ nonlosing_moves.0) & FULL_BOARD);
 
-        // TODO: ignore wins that come after enemy win
         if Bitboard(current).has_won() {
-            return Score::Unknown;
+            let other_winning = Bitboard(other).get_won_cells();
+            if other_winning == 0 {
+                return Score::Unknown;
+            }
+
+            // Check if all winning cells of the current player are below the other player's winning
+            // cells. The idea is to find which cells can be ignored and there might be a better way
+            // to do than what is implemented here.
+            //
+            // The formula for finding the least significant bit is: v & (!v + 1)
+            // In order to find the least bit in every column, the formula is generalized to:
+            // board & (!board + BOTTOM_ROW)
+            // We add BUFFER_ROW to the board to guarantee that every column has at least one bit
+            // set because otherwise columns would wrap over.
+            let other_helper = other_winning | BUFFER_ROW;
+            let mask = (other_helper & (!other_helper + BOTTOM_ROW)) - BOTTOM_ROW;
+            let current_winning = Bitboard(current).get_won_cells();
+            if mask & current_winning != 0 {
+                return Score::Unknown;
+            }
         }
 
         // the current player loses if they can't win in any of the non-losing columns and there
