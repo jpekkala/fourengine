@@ -10,7 +10,6 @@ export default class Board {
         this.boardColor = options.boardColor || 'black';
         this.animationSpeedMs = options.animationSpeedMs || 200;
         this.game = new Game(options.variation);
-        this.animating = 0;
         this.drawBoard();
     }
 
@@ -42,7 +41,7 @@ export default class Board {
         });
 
         if (animate) {
-            const svgTime = this.svgView.getCurrentTime();
+            const svgTime = this.boardView.getCurrentTime();
             const animFrom = animationSettings.from || -axis;
             const animTo = animationSettings.to || cy;
             const duration = (cy + axis) / this.cellSize * this.animationSpeedMs;
@@ -67,6 +66,70 @@ export default class Board {
         return circle;
     }
 
+    getSolutionIndicator(type) {
+        const width = this.cellSize * 0.7;
+        const svgHeight = this.cellSize * 0.20;
+        const svgWidth = this.cellSize * 0.5;
+        const colors = {
+            loading: 'gray',
+            red: '#F40000',
+            blue: '#526BE1',
+            draw: '#FBFB00',
+        }
+
+        const elem = this.stringToHTML(`<div style="width:${width}px;background:${colors[type] || 'black'};border-radius:4px;box-shadow: -1px 0 3px 0 rgba(0, 0, 0, .5);display:flex;justify-content:center;align-items:center;"></div>`);
+
+        if (type === 'loading') {
+            const outerAnim = `
+                <animate 
+                    attributeName="r"
+                    from="15" to="15"
+                    begin="0s" dur="0.8s"
+                    values="15;9;15" calcMode="linear"
+                    repeatCount="indefinite"
+                />
+                <animate
+                    attributeName="fill-opacity"
+                    from="1" to="1"
+                    begin="0s" dur="0.8s"
+                    values="1;.5;1" calcMode="linear"
+                    repeatCount="indefinite"
+                />
+            `;
+
+            const loader = this.stringToHTML(`
+                <svg width="${svgWidth}" height="${svgHeight}" viewBox="0 0 120 20" xmlns="http://www.w3.org/2000/svg" fill="white">
+                    <circle cx="15" cy="10" r="15">
+                        ${outerAnim}
+                    </circle>
+                    <circle cx="60" cy="10" r="9" fill-opacity="0.3">
+                        <animate
+                            attributeName="r"
+                            from="9" to="9"
+                            begin="0s" dur="0.8s"
+                            values="9;15;9" calcMode="linear"
+                            repeatCount="indefinite"
+                        />
+                        <animate
+                            attributeName="fill-opacity"
+                            from="0.5" to="0.5"
+                            begin="0s" dur="0.8s"
+                            values=".5;1;.5" calcMode="linear"
+                            repeatCount="indefinite"
+                        />
+                    </circle>
+                    <circle cx="105" cy="10" r="15">
+                        ${outerAnim}
+                    </circle>
+                </svg>
+            `);
+
+            elem.appendChild(loader);
+        }
+
+        return elem;
+    }
+
     transformDiscs() {
         if (!this.game.hasWon() || this.animating) return;
         for (let x = 0; x < this.cols; x++) {
@@ -79,20 +142,21 @@ export default class Board {
     }
 
     drawBoard() {
+        this.animating = 0;
         this.container.innerHTML = '';
         const width = this.cols * this.cellSize;
         const height = this.rows * this.cellSize;
         const axis = this.cellSize / 2;
         const skewY = this.cellSize / 10;
         const skewX = -skewY;
-        const borderWidth = Math.round(axis/2);
+        const borderWidth = Math.round(axis / 2);
 
         const board = this.stringToHTML(`<div>
             <div style="width:${width}px;height:${height}px;margin-top:20px;border:${borderWidth}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
-                <svg width="${width}px" viewBox="0 0 ${width} ${height}" id="svg_view">
+                <svg width="${width}px" viewBox="0 0 ${width} ${height}" id="board_view">
                     <defs>
                         <pattern id="grid_pattern" patternUnits="userSpaceOnUse" width="${this.cellSize}" height="${this.cellSize}">
-                            <circle cx="${axis}" cy="${axis}" r="${axis*0.8}" fill="black" />
+                            <circle cx="${axis}" cy="${axis}" r="${axis * 0.8}" fill="black" />
                         </pattern>
                         <mask id="column_mask">
                             <rect width="${this.cellSize}" height="${height}" fill="white" />
@@ -113,11 +177,14 @@ export default class Board {
                     </defs>
                 </svg>
             </div>
+            <div id="column_solutions" style="width:${width}px;margin:10px ${borderWidth}px;display:flex;flex-direction:row;"></div>
         </div>`);
         this.container.appendChild(board);
-        this.svgView = board.querySelector('#svg_view');
+        this.boardView = board.querySelector('#board_view');
+        this.solutionsView = board.querySelector('#column_solutions');
 
         for (let i = 0; i < this.cols; i++) {
+            // Board columns
             const column = this.getNode('svg', {
                 x: this.cellSize * i,
                 y: 0,
@@ -125,7 +192,7 @@ export default class Board {
             });
 
             column.addEventListener('mousedown', e => this.mouseHandler(i, e));
-            this.svgView.appendChild(column);
+            this.boardView.appendChild(column);
 
             for (let j = 0; j < this.rows; j++) {
                 const disc = this.getSvgDisc({ column: i, row: j });
@@ -139,6 +206,13 @@ export default class Board {
                 mask: 'url(#column_mask)'
             });
             column.appendChild(mask);
+
+            // Column solutions
+            const solution = this.stringToHTML(`
+                <div id="solution_${i}" style="display:flex;justify-content:center;width:${this.cellSize}px;"></div>
+            `);
+
+            this.solutionsView.appendChild(solution);
         }
     }
 
@@ -197,7 +271,7 @@ export default class Board {
     }
 
     getNode(node, props) {
-        const n = document.createElementNS("http://www.w3.org/2000/svg", node);
+        const n = document.createElementNS('http://www.w3.org/2000/svg', node);
         for (const p in props) {
             n.setAttributeNS(null, p, props[p]);
         }
