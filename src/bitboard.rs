@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use crate::score::Score;
+use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::Formatter;
 
@@ -453,6 +454,18 @@ impl Position {
         } else {
             Score::Draw
         }
+    }
+}
+
+impl Ord for Position {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_position_code().cmp(&other.to_position_code())
+    }
+}
+
+impl PartialOrd for Position {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

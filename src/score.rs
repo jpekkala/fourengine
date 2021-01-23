@@ -41,6 +41,17 @@ impl Score {
         }
     }
 
+    pub fn from_char(ch: char) -> Score {
+        match ch {
+            '-' => Score::Loss,
+            '<' => Score::DrawOrLoss,
+            '=' => Score::Draw,
+            '>' => Score::DrawOrWin,
+            '+' => Score::Win,
+            _ => Score::Unknown,
+        }
+    }
+
     #[allow(dead_code)]
     pub fn is_compatible(self, other: Score) -> bool {
         if self == other || self == Score::Unknown || other == Score::Unknown {
