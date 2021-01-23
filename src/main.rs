@@ -1,15 +1,16 @@
 use crate::benchmark::Benchmark;
 use crate::bitboard::Position;
-use crate::engine::{explore_tree, Engine};
+use crate::book::generate;
+use crate::engine::Engine;
 use crate::score::Score;
 use clap::{App, Arg};
-use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
 
 pub mod benchmark;
 pub mod bitboard;
+pub mod book;
 pub mod engine;
 pub mod heuristic;
 pub mod score;
@@ -80,43 +81,6 @@ fn parse_line(line: String) -> Option<(String, Score)> {
     Some((variation, score))
 }
 
-fn generate() {
-    let mut set = HashSet::new();
-    explore_tree(Position::empty(), 8, &mut |pos| {
-        let (pos, _symmetric) = pos.normalize();
-        let code = pos.to_position_code();
-        let is_immediate_win = pos.get_immediate_wins().count_moves() > 0;
-        let is_forced = pos
-            .to_other_perspective()
-            .get_immediate_wins()
-            .count_moves()
-            > 0;
-        if !pos.has_won() && !is_immediate_win && !is_forced {
-            set.insert(code);
-        }
-    });
-    let total_count = set.len();
-    println!("{} total positions", total_count);
-
-    let mut total_benchmark = Benchmark::empty();
-    let mut engine = Engine::new();
-    let mut count = 0;
-    explore_tree(Position::empty(), 8, &mut |pos| {
-        count += 1;
-        engine.set_position(pos);
-        let benchmark = Benchmark::run(&mut engine);
-        total_benchmark = total_benchmark.add(benchmark);
-        if count % 10 == 0 {
-            println!(
-                "Solved {} out of {}. Speed is {} nodes per second",
-                count,
-                total_count,
-                total_benchmark.get_speed()
-            );
-        }
-    });
-}
-
 fn main() {
     let matches = App::new("Fourengine")
         .version("1.0")
@@ -141,7 +105,10 @@ fn main() {
     if let Some(test_file) = matches.value_of("test_file") {
         run_test_file(test_file).expect("Cannot read file");
     } else if matches.is_present("generate") {
-        generate();
+        match generate() {
+            Ok(_) => {}
+            Err(str) => eprintln!("{}", str),
+        }
     } else {
         let variation = match matches.value_of("variation") {
             Some(variation) => String::from(variation),

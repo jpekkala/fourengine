@@ -63,6 +63,17 @@ impl Score {
             }
         }
     }
+
+    pub fn to_char(&self) -> char {
+        match self {
+            Score::Loss => '-',
+            Score::DrawOrLoss => '<',
+            Score::Draw => '=',
+            Score::DrawOrWin => '>',
+            Score::Win => '+',
+            Score::Unknown => '?',
+        }
+    }
 }
 
 #[cfg(test)]

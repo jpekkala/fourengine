@@ -18,11 +18,11 @@ pub const POSITION_BITS: u32 = (BOARD_HEIGHT + 1) * BOARD_WIDTH;
 pub type BoardInteger = u64;
 
 /// The discs of a single player.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash)]
 pub struct Bitboard(pub BoardInteger);
 
 /// The board state of a particular position but not how the position was arrived at.
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug, Eq, Hash)]
 pub struct Position {
     pub current: Bitboard,
     pub other: Bitboard,
