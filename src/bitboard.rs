@@ -765,7 +765,6 @@ mod tests {
         {
             let position = Position::from_variation("112233554").unwrap();
             let (white_board, red_board) = position.get_ordered_boards();
-            println!("{}", Bitboard(white_board.get_won_cells()));
             assert_eq!(white_board.has_won(), true);
             assert_eq!(red_board.has_won(), false);
             assert_eq!(
@@ -777,6 +776,26 @@ mod tests {
                     "0000000"
                     "0000000"
                     "1111100"
+                )
+            );
+        }
+
+        // star
+        {
+            let position =
+                Position::from_variation("431223323133222116756556575566677741414").unwrap();
+            let (white_board, red_board) = position.get_ordered_boards();
+            assert_eq!(white_board.has_won(), true);
+            assert_eq!(red_board.has_won(), false);
+            assert_eq!(
+                Bitboard(white_board.get_won_cells()),
+                bitboard!(
+                    "0100010"
+                    "0010100"
+                    "1111111"
+                    "0011100"
+                    "0101010"
+                    "1001001"
                 )
             );
         }
