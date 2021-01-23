@@ -1,3 +1,4 @@
+pub mod benchmark;
 pub mod bitboard;
 pub mod engine;
 mod heuristic;

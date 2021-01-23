@@ -1,3 +1,4 @@
+use crate::benchmark::Benchmark;
 use crate::bitboard::Position;
 use crate::engine::{explore_tree, Engine};
 use crate::score::Score;
@@ -6,81 +7,13 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
-use std::time::{Duration, Instant};
 
+pub mod benchmark;
 pub mod bitboard;
 pub mod engine;
 pub mod heuristic;
 pub mod score;
 pub mod trans_table;
-
-struct Benchmark {
-    score: Score,
-    duration: Duration,
-    work_count: usize,
-}
-
-impl Benchmark {
-    fn run(engine: &mut Engine) -> Benchmark {
-        let start_work = engine.work_count;
-        let start_time = Instant::now();
-        let score = engine.solve();
-        let duration = start_time.elapsed();
-        let work_count = engine.work_count - start_work;
-
-        Benchmark {
-            score,
-            duration,
-            work_count,
-        }
-    }
-
-    fn empty() -> Benchmark {
-        Benchmark {
-            score: Score::Unknown,
-            duration: Duration::from_secs(0),
-            work_count: 0,
-        }
-    }
-
-    fn add(&self, other: Benchmark) -> Benchmark {
-        Benchmark {
-            score: self.score,
-            duration: self.duration + other.duration,
-            work_count: self.work_count + other.work_count,
-        }
-    }
-
-    fn get_speed(&self) -> f64 {
-        self.work_count as f64 / self.duration.as_secs_f64()
-    }
-
-    fn print(&self) {
-        let width = 8;
-        println!("The score is {:?}", self.score);
-        println!(
-            "Work: {}",
-            format_large_number(self.work_count as f64, width)
-        );
-        println!(
-            "Time: {:>width$.3} s",
-            self.duration.as_secs_f64(),
-            width = width
-        );
-        println!(
-            "Speed: {}/s",
-            format_large_number(self.get_speed(), width - 1)
-        );
-
-        fn format_large_number(n: f64, width: usize) -> String {
-            if n < 100_000.0 {
-                format!("{:>width$}", n, width = width)
-            } else {
-                format!("{:>width$.3} M", n / 1_000_000.0, width = width)
-            }
-        }
-    }
-}
 
 fn run_variation(engine: &mut Engine, variation: &str) -> Result<Benchmark, String> {
     let position = Position::from_variation(&variation).ok_or("Invalid variation")?;
