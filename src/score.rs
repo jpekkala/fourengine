@@ -101,4 +101,9 @@ mod tests {
         assert_eq!(Score::Win.flip(), Score::Loss);
         assert_eq!(Score::Unknown.flip(), Score::Unknown);
     }
+
+    #[test]
+    fn compatible_scores() {
+        assert!(Score::Draw.is_compatible(Score::DrawOrWin));
+    }
 }

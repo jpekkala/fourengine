@@ -156,6 +156,17 @@ impl Bitboard {
     fn get_column_in_place(&self, x: u32) -> BoardInteger {
         self.0 & (FIRST_COLUMN << x * BIT_HEIGHT)
     }
+
+    /// Returns a bitmap where only the lowest 1 bit in each column is kept set. If a column has no
+    /// bits set, the gutter bit is set for that column instead.
+    fn keep_lowest_or_gutter(&self) -> BoardInteger {
+        // The formula for finding the least significant bit in a number is `v & (!v + 1)`
+        // which for a bitboard can be generalized to `board & (!board + BOTTOM_ROW)`
+
+        // prevent overflow by always having at least the gutter set
+        let helper = self.0 | BUFFER_ROW;
+        helper & (!helper + BOTTOM_ROW)
+    }
 }
 
 #[inline]
@@ -446,64 +457,44 @@ impl Position {
     /// The score is returned from the current player's perspective. If there are non-losing moves
     /// in an uneven column, the score cannot be determined and Unknown is returned.
     #[inline(always)]
-    pub fn autofinish_score(&self, nonlosing_moves: MoveBitmap) -> Score {
+    pub fn autofinish_score(&self, playable_moves: MoveBitmap) -> Score {
         let mut current = self.current.0;
         let mut other = self.other.0;
         let empty = !self.both();
 
         // the other player can imitate moves only if every playable column has an even number of
         // cells left
-        if (nonlosing_moves.0 & EVEN_ROWS) != 0 {
+        if (playable_moves.0 & EVEN_ROWS) != 0 {
             return Score::Unknown;
         }
 
-        // highest bit set for each non-losing column
-        let nonlosing_columns = (FULL_BOARD + nonlosing_moves.0) & BUFFER_ROW;
-        // highest bit set for each losing column
-        let losing_columns = nonlosing_columns ^ BUFFER_ROW;
+        // gutter bit set for each non-losing column
+        let playable_gutter = (FULL_BOARD + playable_moves.0) & BUFFER_ROW;
+        // gutter bit set for each losing or full column
+        let unplayable_gutter = playable_gutter ^ BUFFER_ROW;
 
-        // the same as FULL_BOARD except that losing columns are full zeroes
-        let nonlosing_board = (nonlosing_columns | (losing_columns >> BOARD_HEIGHT)) - BOTTOM_ROW;
-        let empty_mask = nonlosing_board & empty;
+        let obtainable_cells = {
+            // the same as FULL_BOARD except that unplayable columns are full zeroes
+            let playable_columns = (playable_gutter | (unplayable_gutter >> BOARD_HEIGHT)) - BOTTOM_ROW;
 
-        current = current | (empty_mask & ODD_ROWS);
-        other = other | (empty_mask & EVEN_ROWS);
+            let even_enemy_threats = Bitboard(other).get_threat_cells() & EVEN_ROWS;
+            let under_threats = Bitboard(even_enemy_threats).keep_lowest_or_gutter() - BOTTOM_ROW;
 
-        let heights = self.get_height_cells();
-        // the current player might be able to win with an immediate win after some columns have
-        // been filled
-        current = current | ((heights ^ nonlosing_moves.0) & FULL_BOARD);
+            let immediate_cells = self.get_height_cells() & FULL_BOARD;
+            immediate_cells | (playable_columns & under_threats & empty & ODD_ROWS)
+        };
+
+        current = current | obtainable_cells;
+        other = other | ((obtainable_cells << 1) & FULL_BOARD);
 
         if Bitboard(current).has_won() {
-            let other_winning = Bitboard(other).get_won_cells();
-            if other_winning == 0 {
-                return Score::Unknown;
-            }
-
-            // Check if all winning cells of the current player are below the other player's winning
-            // cells. The idea is to find which cells can be ignored and there might be a better way
-            // to do than what is implemented here.
-            //
-            // The formula for finding the least significant bit is: v & (!v + 1)
-            // In order to find the least bit in every column, the formula is generalized to:
-            // board & (!board + BOTTOM_ROW)
-            // We add BUFFER_ROW to the board to guarantee that every column has at least one bit
-            // set because otherwise columns would wrap over.
-            let other_helper = other_winning | BUFFER_ROW;
-            let mask = (other_helper & (!other_helper + BOTTOM_ROW)) - BOTTOM_ROW;
-            let current_winning = Bitboard(current).get_won_cells();
-            if mask & current_winning != 0 {
-                return Score::Unknown;
-            }
+            return Score::Unknown;
         }
 
-        // the current player loses if they can't win in any of the non-losing columns and there
-        // are non-full losing columns remaining
-        let loses = (heights & losing_columns) != losing_columns;
-        if Bitboard(other).has_won() || loses {
+        if Bitboard(other).has_won() {
             Score::Loss
         } else {
-            Score::Draw
+            Score::DrawOrLoss
         }
     }
 }

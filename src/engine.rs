@@ -109,11 +109,8 @@ impl Engine {
         }
 
         let auto_score = position.autofinish_score(nonlosing_moves);
-        if auto_score == Score::Loss {
-            return QuickEvaluation::Score(Score::Loss);
-        }
-        if auto_score == Score::Draw && ab.alpha == Score::Draw {
-            return QuickEvaluation::Score(Score::Draw);
+        if auto_score != Score::Unknown && auto_score <= ab.alpha {
+            return QuickEvaluation::Score(auto_score);
         }
 
         QuickEvaluation::Moves(nonlosing_moves)
@@ -191,13 +188,10 @@ impl Engine {
             if move_bitmap.has_move(x) {
                 let new_position = self.position.position_after_drop(x).unwrap();
                 let quick_evaluation = self.quick_evaluate(&new_position, &ab.flip());
-                if let QuickEvaluation::Score(score) = quick_evaluation {
-                    if score == Score::Loss {
-                        return Score::Win;
-                    } else if score == Score::Draw {
-                        if ab.beta == Score::Draw {
-                            return Score::Draw;
-                        }
+                if let QuickEvaluation::Score(their_score) = quick_evaluation {
+                    let our_score = their_score.flip();
+                    if our_score >= ab.beta {
+                        return our_score;
                     }
                 }
             }
