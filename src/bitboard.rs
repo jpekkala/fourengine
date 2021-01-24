@@ -39,14 +39,14 @@ pub enum Disc {
     Empty,
 }
 
-// the column height including the buffer cell
+// the column height including the gutter cell
 pub const BIT_HEIGHT: u32 = BOARD_HEIGHT + 1;
 
 const ALL_BITS: BoardInteger = (1 << (BIT_HEIGHT * BOARD_WIDTH)) - 1;
 pub const FIRST_COLUMN: BoardInteger = (1 << BIT_HEIGHT) - 1;
 const BOTTOM_ROW: BoardInteger = ALL_BITS / FIRST_COLUMN;
-const BUFFER_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
-const FULL_BOARD: BoardInteger = ALL_BITS ^ BUFFER_ROW;
+const GUTTER_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
+const FULL_BOARD: BoardInteger = ALL_BITS ^ GUTTER_ROW;
 const LEFT_HALF: BoardInteger = FIRST_COLUMN
     | (FIRST_COLUMN << BIT_HEIGHT)
     | (FIRST_COLUMN << 2 * BIT_HEIGHT)
@@ -113,7 +113,7 @@ impl Bitboard {
     }
 
     pub fn is_legal(&self) -> bool {
-        (BUFFER_ROW & self.0) == 0
+        (GUTTER_ROW & self.0) == 0
     }
 
     pub fn has_disc(&self, x: u32, y: u32) -> bool {
@@ -164,7 +164,7 @@ impl Bitboard {
         // which for a bitboard can be generalized to `board & (!board + BOTTOM_ROW)`
 
         // prevent overflow by always having at least the gutter set
-        let helper = self.0 | BUFFER_ROW;
+        let helper = self.0 | GUTTER_ROW;
         helper & (!helper + BOTTOM_ROW)
     }
 }
@@ -469,9 +469,9 @@ impl Position {
         }
 
         // gutter bit set for each non-losing column
-        let playable_gutter = (FULL_BOARD + playable_moves.0) & BUFFER_ROW;
+        let playable_gutter = (FULL_BOARD + playable_moves.0) & GUTTER_ROW;
         // gutter bit set for each losing or full column
-        let unplayable_gutter = playable_gutter ^ BUFFER_ROW;
+        let unplayable_gutter = playable_gutter ^ GUTTER_ROW;
 
         let obtainable_cells = {
             // the same as FULL_BOARD except that unplayable columns are full zeroes
@@ -629,7 +629,7 @@ mod tests {
 
     #[test]
     fn bitboard_macro() {
-        // buffer row is optional
+        // gutter row is optional
         let bitboard = bitboard!(
             "0000000"
             "0001000"
