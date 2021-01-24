@@ -1,6 +1,6 @@
 use crate::benchmark::Benchmark;
 use crate::bitboard::Position;
-use crate::book::generate_book;
+use crate::book::{generate_book, verify_book};
 use crate::engine::Engine;
 use crate::score::Score;
 use clap::{App, Arg};
@@ -96,16 +96,33 @@ fn main() {
         .arg(
             Arg::new("variation")
                 .long("variation")
+                .short('v')
                 .about("Runs a specific variation")
                 .takes_value(true),
         )
-        .arg(Arg::new("generate").long("generate"))
+        .arg(
+            Arg::new("generate_book")
+                .long("generate-book")
+                .short('g')
+                .about("Generates and saves an opening book"),
+        )
+        .arg(
+            Arg::new("verify_book")
+                .long("verify-book")
+                .about("Compares a generated book against a reference book")
+                .takes_value(true),
+        )
         .get_matches();
 
     if let Some(test_file) = matches.value_of("test_file") {
         run_test_file(test_file).expect("Cannot read file");
-    } else if matches.is_present("generate") {
+    } else if matches.is_present("generate_book") {
         match generate_book() {
+            Ok(_) => {}
+            Err(str) => eprintln!("{}", str),
+        }
+    } else if let Some(reference_book) = matches.value_of("verify_book") {
+        match verify_book(reference_book) {
             Ok(_) => {}
             Err(str) => eprintln!("{}", str),
         }

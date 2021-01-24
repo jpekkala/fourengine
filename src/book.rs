@@ -7,6 +7,7 @@ use std::collections::{BTreeSet, HashMap};
 use std::fs::{create_dir_all, File};
 use std::io::{BufRead, BufReader, LineWriter, Write};
 
+const DEFAULT_PLY: u32 = 8;
 const BOOK_FOLDER: &str = "books";
 
 fn get_book_file(ply: u32) -> String {
@@ -153,15 +154,13 @@ impl BookWriter {
 }
 
 pub fn generate_book() -> Result<(), std::io::Error> {
-    const PLY: u32 = 8;
-
     create_dir_all(BOOK_FOLDER)?;
 
     let set = find_positions_to_solve();
     let total_count = set.len();
     println!("There are {} positions to solve", total_count);
 
-    let existing_book = Book::open_for_ply(PLY).unwrap_or_else(|_err| Book::empty());
+    let existing_book = Book::open_for_ply(DEFAULT_PLY).unwrap_or_else(|_err| Book::empty());
     if !existing_book.is_empty() {
         println!("Found {} existing positions", existing_book.len());
     }
@@ -169,7 +168,7 @@ pub fn generate_book() -> Result<(), std::io::Error> {
     let mut total_benchmark = Benchmark::empty();
     let mut count = 0;
     let mut solved = 0;
-    let mut book_writer = BookWriter::create_for_ply(PLY)?;
+    let mut book_writer = BookWriter::create_for_ply(DEFAULT_PLY)?;
     for pos in set {
         count += 1;
         if let Some(score) = existing_book.map.get(&pos) {
@@ -194,6 +193,36 @@ pub fn generate_book() -> Result<(), std::io::Error> {
             solved = 0;
         }
     }
+    Ok(())
+}
+
+pub fn verify_book(reference_book: &str) -> Result<(), std::io::Error> {
+    let book = Book::open_for_ply(DEFAULT_PLY)?;
+    let reference_book = Book::open(reference_book)?;
+
+    let mut missing_count = 0;
+    let mut invalid_count = 0;
+    for (position, reference_score) in reference_book.map.iter() {
+        let score = book.get(position);
+        if score == Score::Unknown {
+            missing_count += 1;
+        } else if *reference_score != score {
+            invalid_count += 1;
+        }
+    }
+
+    if missing_count > 0 {
+        println!(
+            "Warning: {} entries missing from the generated book",
+            missing_count
+        );
+    }
+    if invalid_count > 0 {
+        panic!("{} invalid positions", invalid_count);
+    } else {
+        println!("The generated book is OK");
+    }
+
     Ok(())
 }
 
