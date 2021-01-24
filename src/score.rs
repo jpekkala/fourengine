@@ -52,6 +52,19 @@ impl Score {
         }
     }
 
+    pub fn from_string(score_str: &str) -> Score {
+        if score_str.len() == 1 {
+            return Score::from_char(score_str.chars().next().unwrap());
+        }
+
+        match score_str.to_lowercase().as_ref() {
+            "win" => Score::Win,
+            "loss" => Score::Loss,
+            "draw" => Score::Draw,
+            _ => Score::Unknown,
+        }
+    }
+
     #[allow(dead_code)]
     pub fn is_compatible(self, other: Score) -> bool {
         if self == other || self == Score::Unknown || other == Score::Unknown {

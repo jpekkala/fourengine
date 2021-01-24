@@ -1,11 +1,11 @@
 use crate::benchmark::{format_large_number, Benchmark};
-use crate::bitboard::{BoardInteger, Position, BOARD_WIDTH};
+use crate::bitboard::{Bitboard, BoardInteger, Position, BOARD_HEIGHT, BOARD_WIDTH};
 use crate::engine::Engine;
 use crate::score::Score;
+use core::mem;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::{create_dir_all, File};
 use std::io::{BufRead, BufReader, LineWriter, Write};
-use std::time::Instant;
 
 const BOOK_FOLDER: &str = "books";
 
@@ -18,6 +18,12 @@ pub struct Book {
 }
 
 impl Book {
+    pub fn empty() -> Book {
+        Book {
+            map: HashMap::new(),
+        }
+    }
+
     pub fn open_for_ply(ply: u32) -> Result<Book, std::io::Error> {
         Book::open(&get_book_file(ply))
     }
@@ -37,21 +43,12 @@ impl Book {
     }
 
     fn include_line(&mut self, line: &str) {
-        if line.len() != 17 {
-            panic!("Invalid line: {}", line);
+        if let Some((position, score)) = parse_hex_line(line).or_else(|| parse_verbose_line(line)) {
+            let (position, _symmetric) = position.normalize();
+            self.map.insert(position, score);
+        } else {
+            panic!("Unknown line: {}", line);
         }
-        let pos_str = &line[0..16];
-        let score_ch = match line.chars().nth(16) {
-            Some(ch) => ch,
-            None => panic!("Invalid score in line: {}", line),
-        };
-        let score = Score::from_char(score_ch);
-        let position_code = match BoardInteger::from_str_radix(pos_str, 16) {
-            Ok(code) => code,
-            _ => panic!("Invalid position code in line: {}", line),
-        };
-        let position = Position::from_position_code(position_code);
-        self.map.insert(position, score);
     }
 
     pub fn get(&self, position: &Position) -> Score {
@@ -67,6 +64,59 @@ impl Book {
 
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
+    }
+}
+
+fn format_hex_line(pos: Position, score: Score) -> String {
+    format!("{:0>16X}{}", pos.to_position_code(), score.to_char())
+}
+
+fn parse_hex_line(line: &str) -> Option<(Position, Score)> {
+    const HEX_LENGTH: usize = mem::size_of::<BoardInteger>() * 2;
+    if line.len() != HEX_LENGTH + 1 {
+        return None;
+    }
+
+    let position_str = &line[0..HEX_LENGTH];
+    let position_code = BoardInteger::from_str_radix(position_str, 16).ok()?;
+    let position = Position::from_position_code(position_code);
+
+    let score = Score::from_string(&line[HEX_LENGTH..]);
+    if score == Score::Unknown {
+        None
+    } else {
+        Some((position, score))
+    }
+}
+
+fn parse_verbose_line(line: &str) -> Option<(Position, Score)> {
+    const CELL_COUNT: usize = (BOARD_WIDTH * BOARD_HEIGHT) as usize;
+    let line: String = line.chars().filter(|x| *x != ',').collect();
+    if line.len() < CELL_COUNT + 1 {
+        return None;
+    }
+    let position_str = &line[0..CELL_COUNT];
+    let score_str = &line[CELL_COUNT..];
+
+    let mut current = Bitboard::empty();
+    let mut other = Bitboard::empty();
+    for (i, ch) in position_str.chars().enumerate() {
+        let y = i as u32 % BOARD_HEIGHT;
+        let x = i as u32 / BOARD_HEIGHT;
+        match ch {
+            'X' | 'x' => current = current.set_disc(x, y),
+            'O' | 'o' => other = other.set_disc(x, y),
+            ' ' | 'b' => {}
+            _ => return None,
+        }
+    }
+
+    let position = Position::new(current, other);
+    let score = Score::from_string(score_str);
+    if score == Score::Unknown {
+        None
+    } else {
+        Some((position, score))
     }
 }
 
@@ -96,17 +146,13 @@ impl BookWriter {
     }
 
     fn write_entry(&mut self, pos: Position, score: Score) -> Result<(), std::io::Error> {
-        let line = format_entry(pos, score);
+        let line = format_hex_line(pos, score);
         self.file.write_all(line.as_bytes())?;
         self.file.write_all(b"\n")
     }
 }
 
-fn format_entry(pos: Position, score: Score) -> String {
-    format!("{:0>16X}{}", pos.to_position_code(), score.to_char())
-}
-
-pub fn generate() -> Result<(), std::io::Error> {
+pub fn generate_book() -> Result<(), std::io::Error> {
     const PLY: u32 = 8;
 
     create_dir_all(BOOK_FOLDER)?;
@@ -115,7 +161,7 @@ pub fn generate() -> Result<(), std::io::Error> {
     let total_count = set.len();
     println!("There are {} positions to solve", total_count);
 
-    let existing_book = Book::open_for_ply(PLY)?;
+    let existing_book = Book::open_for_ply(PLY).unwrap_or_else(|_err| Book::empty());
     if !existing_book.is_empty() {
         println!("Found {} existing positions", existing_book.len());
     }

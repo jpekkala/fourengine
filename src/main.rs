@@ -1,6 +1,6 @@
 use crate::benchmark::Benchmark;
 use crate::bitboard::Position;
-use crate::book::generate;
+use crate::book::generate_book;
 use crate::engine::Engine;
 use crate::score::Score;
 use clap::{App, Arg};
@@ -105,7 +105,7 @@ fn main() {
     if let Some(test_file) = matches.value_of("test_file") {
         run_test_file(test_file).expect("Cannot read file");
     } else if matches.is_present("generate") {
-        match generate() {
+        match generate_book() {
             Ok(_) => {}
             Err(str) => eprintln!("{}", str),
         }
