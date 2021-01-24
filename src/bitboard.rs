@@ -284,6 +284,10 @@ impl Position {
         return self.current.has_won() || self.other.has_won();
     }
 
+    fn is_white_moves(&self) -> bool {
+        self.get_ply() % 2 == 0
+    }
+
     fn get_ordered_boards(&self) -> (Bitboard, Bitboard) {
         let white_moves = self.get_ply() % 2 == 0;
         let white_board = if white_moves {
@@ -355,6 +359,10 @@ impl Position {
         BOTTOM_ROW + self.current.0 + self.current.0 + self.other.0
     }
 
+    pub fn as_hex_string(&self) -> String {
+        format!("{:0>16X}", self.to_position_code())
+    }
+
     pub fn to_normalized_position_code(&self) -> (BoardInteger, bool) {
         let flipped = self.flip();
         let code1 = self.to_position_code();
@@ -389,6 +397,49 @@ impl Position {
         let both = self.both();
         let column = (both >> x * BIT_HEIGHT) & FIRST_COLUMN;
         (column + 1).trailing_zeros() % 2 == 0
+    }
+
+    pub fn guess_variation(&self) -> Option<String> {
+        fn recurse(target: &Position, variation: &mut String) -> bool {
+            let current_position = Position::from_variation(variation).unwrap();
+            if current_position == *target {
+                return true;
+            }
+            let target_board = if current_position.is_white_moves() {
+                target.get_ordered_boards().0
+            } else {
+                target.get_ordered_boards().1
+            };
+            for i in 0..BOARD_WIDTH {
+                // Use order: 3,2,4,1,5,0,6
+                let x = {
+                    let middle = (BOARD_WIDTH / 2);
+                    if i % 2 == 0 {
+                        middle + (i + 1) / 2
+                    } else {
+                        middle - (i + 1) / 2
+                    }
+                };
+                let y = current_position.get_height(x);
+                if target_board.has_disc(x, y) {
+                    let ch = std::char::from_digit(x + 1, 10).unwrap();
+                    variation.push(ch);
+                    if recurse(target, variation) {
+                        return true
+                    } else {
+                        variation.pop();
+                    }
+                }
+            }
+            false
+        }
+
+        let mut variation = String::new();
+        if recurse(&self, &mut variation) {
+            Some(variation)
+        } else {
+            None
+        }
     }
 
     /// What happens if the other player always plays in the same column as the current player.
