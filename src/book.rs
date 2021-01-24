@@ -13,7 +13,7 @@ fn get_book_file(ply: u32) -> String {
     format!("{}/{}-ply.txt", BOOK_FOLDER, ply)
 }
 
-struct Book {
+pub struct Book {
     map: HashMap<Position, Score>,
 }
 
@@ -52,6 +52,13 @@ impl Book {
         };
         let position = Position::from_position_code(position_code);
         self.map.insert(position, score);
+    }
+
+    pub fn get(&self, position: &Position) -> Score {
+        match self.map.get(position) {
+            Some(score) => *score,
+            None => Score::Unknown,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -113,8 +120,6 @@ pub fn generate() -> Result<(), std::io::Error> {
         println!("Found {} existing positions", existing_book.len());
     }
 
-    let start_time = Instant::now();
-    let mut remaining = (total_count - existing_book.len()) as u32;
     let mut total_benchmark = Benchmark::empty();
     let mut count = 0;
     let mut solved = 0;
@@ -126,21 +131,21 @@ pub fn generate() -> Result<(), std::io::Error> {
             continue;
         }
 
-        remaining -= 1;
-        solved += 1;
         let benchmark = book_writer.solve_position(pos)?;
         total_benchmark = total_benchmark.add(benchmark);
-        if count % 10 == 0 {
-            let duration = start_time.elapsed();
-            let speed = solved as f64 / duration.as_secs_f64();
-            let left_secs = remaining as f64 / speed;
+        solved += 1;
+
+        if count % 20 == 0 {
+            let average_work = total_benchmark.work_count as f64 / solved as f64;
             println!(
-                "Solved {} out of {}. Speed is {} nodes per second. Estimated minutes left: {:.2}",
+                "Solved {} out of {}. Speed is {} nodes per second. Average work per position: {}",
                 count,
                 total_count,
                 format_large_number(total_benchmark.get_speed(), 0),
-                left_secs / 60.0,
+                format_large_number(average_work, 0),
             );
+            total_benchmark = Benchmark::empty();
+            solved = 0;
         }
     }
     Ok(())

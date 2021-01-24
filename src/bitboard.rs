@@ -413,7 +413,7 @@ impl Position {
             for i in 0..BOARD_WIDTH {
                 // Use order: 3,2,4,1,5,0,6
                 let x = {
-                    let middle = (BOARD_WIDTH / 2);
+                    let middle = BOARD_WIDTH / 2;
                     if i % 2 == 0 {
                         middle + (i + 1) / 2
                     } else {
@@ -425,7 +425,7 @@ impl Position {
                     let ch = std::char::from_digit(x + 1, 10).unwrap();
                     variation.push(ch);
                     if recurse(target, variation) {
-                        return true
+                        return true;
                     } else {
                         variation.pop();
                     }
