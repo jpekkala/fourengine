@@ -130,6 +130,30 @@ export default class Board {
         return elem;
     }
 
+    getGameBtn(type) {
+        let btnStyle = 'width: 50px; height: 30px; display: flex; align-items: center; justify-content: center;';
+        if (type == 'undo' || type == 'fast-forward') {
+            btnStyle += 'transform: rotateY(180deg);';
+        }
+
+        if (type == 'undo' || type == 'redo') {
+            return `<button style="${btnStyle}" id="${type}_move">
+                <svg height="25" viewBox="-265 388.9 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M-242.6,407l26.1,15.1c0.6,0.4,0.6,1.2,0,1.6l-26.1,15.1c-0.6,0.4-1.4-0.1-1.4-0.8v-30.2C-244,407.1-243.2,406.7-242.6,407z" />
+                </svg>
+            </button>`;
+
+        } else if(type == 'rewind' || type == 'fast-forward') {
+            return `<button style="${btnStyle}" id="${type}_move">
+                <svg height="15" viewBox="0 0 554.239 554.239" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M512.084,86.498L314.819,215.25V110.983c0-26.805-18.874-37.766-42.155-24.479L17.46,253.065
+                        c-23.28,13.287-23.28,34.824,0,48.11l255.204,166.562c23.281,13.286,42.155,2.325,42.155-24.48V338.985l197.266,128.753
+                        c23.28,13.286,42.154,2.325,42.154-24.48V110.983C554.239,84.178,535.365,73.217,512.084,86.498z" />
+                </svg>
+            </button>`;
+        }
+    }
+
     transformDiscs() {
         if (!this.game.hasWon() || this.animating) return;
         for (let x = 0; x < this.cols; x++) {
@@ -151,7 +175,7 @@ export default class Board {
         const skewX = -skewY;
         const borderWidth = Math.round(axis / 2);
 
-        const board = this.stringToHTML(`<div>
+        const board = this.stringToHTML(`<div style="width:${width}px;">
             <div style="width:${width}px;height:${height}px;margin-top:20px;border:${borderWidth}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
                 <svg width="${width}px" viewBox="0 0 ${width} ${height}" id="board_view">
                     <defs>
@@ -178,6 +202,9 @@ export default class Board {
                 </svg>
             </div>
             <div id="column_solutions" style="width:${width}px;margin:10px ${borderWidth}px;display:flex;flex-direction:row;"></div>
+            <div id="game_buttons" style="position:relative;display:flex;flex-direction:row;justify-content:flex-end;">
+                
+            </div>
         </div>`);
         this.container.appendChild(board);
         this.boardView = board.querySelector('#board_view');
