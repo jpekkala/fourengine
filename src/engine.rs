@@ -86,7 +86,11 @@ impl Engine {
     }
 
     pub fn solve(&mut self) -> Score {
-        if self.ply == 42 && !self.position.has_won() {
+        if self.position.current.has_won() {
+            return Score::Win;
+        } else if self.position.other.has_won() {
+            return Score::Loss;
+        } else if self.ply == BOARD_WIDTH * BOARD_HEIGHT {
             return Score::Draw;
         }
         for x in 0..BOARD_WIDTH {
