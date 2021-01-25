@@ -477,12 +477,13 @@ impl Position {
             // the same as FULL_BOARD except that unplayable columns are full zeroes
             let playable_columns =
                 (playable_gutter | (unplayable_gutter >> BOARD_HEIGHT)) - BOTTOM_ROW;
+            let playable_area = playable_columns & empty;
 
-            let even_enemy_threats = Bitboard(other).get_threat_cells() & EVEN_ROWS;
+            let even_enemy_threats = Bitboard(other).get_threat_cells() & EVEN_ROWS & playable_area;
             let under_threats = Bitboard(even_enemy_threats).keep_lowest_or_gutter() - BOTTOM_ROW;
 
             let immediate_cells = self.get_height_cells() & FULL_BOARD;
-            immediate_cells | (playable_columns & under_threats & empty & ODD_ROWS)
+            immediate_cells | (playable_area & under_threats & ODD_ROWS)
         };
 
         current = current | obtainable_cells;
