@@ -86,6 +86,9 @@ impl Engine {
     }
 
     pub fn solve(&mut self) -> Score {
+        if self.ply == 42 && !self.position.has_won() {
+            return Score::Draw;
+        }
         for x in 0..BOARD_WIDTH {
             let board = self.position.drop(x);
             if board.is_legal() && board.has_won() {
