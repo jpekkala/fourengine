@@ -2,6 +2,7 @@ use crate::benchmark::{format_large_number, Benchmark};
 use crate::bitboard::{Bitboard, BoardInteger, Position, BOARD_HEIGHT, BOARD_WIDTH};
 use crate::engine::Engine;
 use crate::score::Score;
+use crate::trans_table::TransTable;
 use core::mem;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::{create_dir_all, File};

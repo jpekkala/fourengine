@@ -1,4 +1,6 @@
 use crate::bitboard::{Bitboard, MoveBitmap, Position, BOARD_HEIGHT, BOARD_WIDTH};
+#[cfg(feature = "book")]
+use crate::book::Book;
 use crate::heuristic::{FixedHeuristic, Heuristic};
 use crate::score::Score;
 use crate::trans_table::TransTable;
@@ -9,6 +11,8 @@ pub struct Engine {
     pub work_count: usize,
     pub heuristic: FixedHeuristic,
     ply: u32,
+    #[cfg(feature = "book")]
+    book: Book,
 }
 
 #[derive(Clone, Copy)]
@@ -66,6 +70,8 @@ impl Engine {
             work_count: 0,
             heuristic: FixedHeuristic {},
             ply: 0,
+            #[cfg(feature = "book")]
+            book: Book::open_for_ply(8).unwrap(),
         }
     }
 
@@ -193,6 +199,17 @@ impl Engine {
                     if our_score >= ab.beta {
                         return our_score;
                     }
+                }
+            }
+        }
+
+        #[cfg(feature = "book")]
+        {
+            if self.ply == 8 {
+                let (position, _) = self.position.normalize();
+                let book_score = self.book.get(&position);
+                if book_score != Score::Unknown {
+                    return book_score;
                 }
             }
         }
