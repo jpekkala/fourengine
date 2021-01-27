@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(clippy::precedence)]
 
 use crate::score::Score;
 use std::cmp::Ordering;
@@ -203,7 +204,7 @@ impl Position {
             let mut temp = column;
             while temp != 0 {
                 count += 1;
-                temp = temp >> 1;
+                temp >>= 1;
             }
             assert!(count > 0);
             let mask = (1 << (count - 1)) - 1;
@@ -292,7 +293,7 @@ impl Position {
     }
 
     pub fn has_won(&self) -> bool {
-        return self.current.has_won() || self.other.has_won();
+        self.current.has_won() || self.other.has_won()
     }
 
     fn is_white_moves(&self) -> bool {
@@ -486,8 +487,8 @@ impl Position {
             immediate_cells | (playable_area & under_threats & ODD_ROWS)
         };
 
-        current = current | obtainable_cells;
-        other = other | ((obtainable_cells << 1) & FULL_BOARD);
+        current |= obtainable_cells;
+        other |= (obtainable_cells << 1) & FULL_BOARD;
 
         if Bitboard(current).has_won() {
             return Score::Unknown;

@@ -2,7 +2,6 @@ use crate::benchmark::{format_large_number, Benchmark};
 use crate::bitboard::{Bitboard, BoardInteger, Position, BOARD_HEIGHT, BOARD_WIDTH};
 use crate::engine::Engine;
 use crate::score::Score;
-use crate::trans_table::TransTable;
 use core::mem;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::{create_dir_all, File};
@@ -167,11 +166,9 @@ pub fn generate_book() -> Result<(), std::io::Error> {
     }
 
     let mut total_benchmark = Benchmark::empty();
-    let mut count = 0;
     let mut solved = 0;
     let mut book_writer = BookWriter::create_for_ply(DEFAULT_PLY)?;
-    for pos in set {
-        count += 1;
+    for (count, pos) in set.into_iter().enumerate() {
         if let Some(score) = existing_book.map.get(&pos) {
             book_writer.write_entry(pos, *score)?;
             continue;

@@ -49,6 +49,12 @@ impl HistoryHeuristic {
     }
 }
 
+impl Default for HistoryHeuristic {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct FixedHeuristic;
 
 // https://www.scirp.org/html/1-9601415_90972.htm

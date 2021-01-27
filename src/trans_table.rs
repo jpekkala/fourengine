@@ -140,7 +140,7 @@ fn closest_power_of_two(number: BoardInteger) -> u32 {
     let mut bit_count = 0;
     while remaining > 0 {
         bit_count += 1;
-        remaining = remaining >> 1;
+        remaining >>= 1;
     }
 
     bit_count

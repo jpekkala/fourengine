@@ -4,6 +4,7 @@ use crate::book::{generate_book, verify_book};
 use crate::engine::Engine;
 use crate::score::Score;
 use clap::{App, Arg};
+use std::cmp::Ordering;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
@@ -70,12 +71,10 @@ fn parse_line(line: String) -> Option<(String, Score)> {
     let variation = String::from(iter.next()?);
     let score_value = iter.next()?.parse::<i32>().unwrap();
 
-    let score = if score_value == 0 {
-        Score::Draw
-    } else if score_value < 0 {
-        Score::Loss
-    } else {
-        Score::Win
+    let score = match score_value.cmp(&0) {
+        Ordering::Less => Score::Loss,
+        Ordering::Equal => Score::Draw,
+        Ordering::Greater => Score::Win,
     };
 
     Some((variation, score))

@@ -1,3 +1,5 @@
+#![allow(clippy::comparison_chain)]
+
 use crate::bitboard::{Bitboard, MoveBitmap, Position, BOARD_HEIGHT, BOARD_WIDTH};
 #[cfg(feature = "book")]
 use crate::book::Book;
@@ -221,7 +223,7 @@ impl Engine {
             }
         }
 
-        let mut ab = ab.clone();
+        let mut ab = ab;
         let mut best_score = Score::Loss;
 
         let trans_score = self.trans_table.fetch(position_code);
@@ -325,5 +327,11 @@ fn insertion_sort(moves: &mut &mut [Move]) {
             moves.swap(j - 1, j);
             j -= 1;
         }
+    }
+}
+
+impl Default for Engine {
+    fn default() -> Self {
+        Self::new()
     }
 }
