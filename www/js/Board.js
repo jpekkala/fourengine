@@ -9,6 +9,7 @@ export default class Board {
         this.cellSize = options.cellSize || 75;
         this.boardColor = options.boardColor || 'black';
         this.animationSpeedMs = options.animationSpeedMs || 200;
+        this.autoSolve = options.autoSolve || false;
         this.game = new Game(options.variation);
         this.drawBoard();
     }
@@ -176,6 +177,10 @@ export default class Board {
         const borderWidth = Math.round(axis / 2);
 
         const board = this.stringToHTML(`<div style="width:${width}px;">
+            <div style="margin:0px ${borderWidth}px;">
+                <input type="checkbox" id="auto_solve" name="auto_solve" checked>
+                <label for="auto_solve">Auto solve</label>
+            </div>
             <div style="width:${width}px;height:${height}px;margin-top:20px;border:${borderWidth}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
                 <svg width="${width}px" viewBox="0 0 ${width} ${height}" id="board_view">
                     <defs>
@@ -202,9 +207,11 @@ export default class Board {
                 </svg>
             </div>
             <div id="column_solutions" style="width:${width}px;margin:10px ${borderWidth}px;display:flex;flex-direction:row;"></div>
-            <div id="game_buttons" style="position:relative;display:flex;flex-direction:row;justify-content:flex-end;">
-                
+            <div style="width:${width}px;display:flex;flex-direction:row;justify-content:space-between;margin:0 ${borderWidth}px;">
+                <div id="game_buttons_left" style="display:flex;"></div>
+                <div id="game_buttons_right" style="display:flex;flex-direction:row;"></div>
             </div>
+            <div id="solution" style="margin:10px ${borderWidth}px;"></div>
         </div>`);
         this.container.appendChild(board);
         this.boardView = board.querySelector('#board_view');
@@ -241,6 +248,8 @@ export default class Board {
 
             this.solutionsView.appendChild(solution);
         }
+
+        this.attachButtons();
     }
 
     pop(column) {
@@ -261,27 +270,64 @@ export default class Board {
     async solve() {
         this.solving = true;
         document.getElementById('solution').innerHTML = 'Solving...';
+        this.setFormDisabled(true);
         try {
             const solution = await this.game.solve();
             this.transformDiscs();
+            this.printSolution(solution);
             console.log('Solution is', solution);
-            let description = '';
-            description += `Score: ${solution.score}<br/>`;
-            description += `Work count: ${solution.workCount}<br/>`;
-            description += `Elapsed time: ${solution.duration} s<br/>`;
-            description += `Nodes per second: ${solution.nps}<br/>`;
-            document.getElementById('solution').innerHTML = description;
         } finally {
             this.solving = false;
+            this.setFormDisabled(false);
         }
+    }
+
+    attachButtons() {
+        const autoSolveChkbox = document.getElementById('auto_solve');
+        autoSolveChkbox.addEventListener('click', e => {
+            this.autoSolve = e.target.checked;
+        });
+
+        this.variationInput = this.stringToHTML(`<input autocomplete="off" style="padding:5px 2px;font-size:14px;width:220px;" id="variation" />`);
+        if (this.game.variation) {
+            this.variationInput.value = this.game.variation;
+        }
+        const solveButton = this.stringToHTML(`<button style="height:30px;" id="solve_button">Solve</button>`);
+        solveButton.addEventListener('click', e => {
+            const variation = document.getElementById('variation').value;
+            this.setVariation(variation);
+            this.solve();
+        });
+
+        const gameButtonsLeft = document.getElementById('game_buttons_left');
+        gameButtonsLeft.appendChild(this.variationInput);
+        gameButtonsLeft.appendChild(solveButton);
+    }
+
+    setFormDisabled(disabled) {
+        document.getElementById('solve_button').disabled = disabled;
+        document.getElementById('variation').disabled = disabled;
+    }
+
+    printSolution(solution) {
+        const description = `<div>
+            <span style="font-weight:bold;">Score:</span> ${solution.score}<br/>
+            <span style="font-weight:bold;">Work count:</span> ${solution.workCount.toLocaleString()}<br/>
+            <span style="font-weight:bold;">Elapsed time:</span> ${solution.duration.toFixed(3)} s<br/>
+            <span style="font-weight:bold;">Nodes per second:</span> ${solution.nps.toLocaleString()}<br/>
+        </div>`;
+        document.getElementById('solution').innerHTML = description;
     }
 
     drop(column) {
         if (!this.game.canDrop(column)) return;
+        this.variationInput.value += column + 1;
         const pos = this.game.drop(column);
-        this.solve();
+        if (this.autoSolve) {
+            this.solve();
+        }
         const animatedDisc = this.getSvgDisc({ ...pos, animate: true });
-        const boardColumn = this.container.querySelector(`#column_${column}`);
+        const boardColumn = document.getElementById(`column_${column}`);
         boardColumn.insertBefore(animatedDisc, boardColumn.firstChild);
     }
 
