@@ -9,7 +9,7 @@ export default class Board {
         this.cellSize = options.cellSize || 75;
         this.boardColor = options.boardColor || 'black';
         this.animationSpeedMs = options.animationSpeedMs || 200;
-        this.autoSolve = options.autoSolve || true;
+        this.autoSolve = options.hasOwnProperty('autoSolve') ? options.autoSolve : true;
         this.game = new Game(options.variation);
         this.drawBoard();
     }
