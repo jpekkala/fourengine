@@ -9,7 +9,7 @@ export default class Board {
         this.cellSize = options.cellSize || 75;
         this.boardColor = options.boardColor || 'black';
         this.animationSpeedMs = options.animationSpeedMs || 200;
-        this.autoSolve = options.autoSolve || false;
+        this.autoSolve = options.autoSolve || true;
         this.game = new Game(options.variation);
         this.drawBoard();
     }
@@ -178,7 +178,7 @@ export default class Board {
 
         const board = this.stringToHTML(`<div style="width:${width}px;">
             <div style="margin:0px ${borderWidth}px;">
-                <input type="checkbox" id="auto_solve" name="auto_solve" checked>
+                <input type="checkbox" id="auto_solve" name="auto_solve" ${this.autoSolve ? 'checked' :''}>
                 <label for="auto_solve">Auto solve</label>
             </div>
             <div style="width:${width}px;height:${height}px;margin-top:20px;border:${borderWidth}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
