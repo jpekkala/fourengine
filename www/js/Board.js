@@ -11,6 +11,7 @@ export default class Board {
         this.animationSpeedMs = options.animationSpeedMs || 200;
         this.autoSolve = options.hasOwnProperty('autoSolve') ? options.autoSolve : true;
         this.game = new Game(options.variation);
+        this.time = Date.now();
         this.drawBoard();
     }
 
@@ -42,7 +43,7 @@ export default class Board {
         });
 
         if (animate) {
-            const svgTime = this.boardView.getCurrentTime();
+            const svgTime = this.boardView.getCurrentTime() || (Date.now() - this.time) / 1000;
             const animFrom = animationSettings.from || -axis;
             const animTo = animationSettings.to || cy;
             const duration = (cy + axis) / this.cellSize * this.animationSpeedMs;
