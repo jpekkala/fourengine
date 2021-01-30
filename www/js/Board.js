@@ -56,10 +56,10 @@ export default class Board {
                 fill: 'freeze'
             })
 
-            animation.onend = () => {
+            animation.addEventListener('endEvent', () => {
                 this.animating--;
                 this.transformDiscs();
-            }
+            });
 
             circle.appendChild(animation);
             this.animating++;
@@ -261,10 +261,10 @@ export default class Board {
         if (this.solving || this.game.hasWon()) return;
 
         if (e.which === 1) {
-            console.log(`Clicked column ${column}`);
+            console.log(`Clicked column ${column + 1}`);
             this.drop(column);
         } else if (e.which === 3) {
-            console.log(`Right-clicked column ${column}`);
+            console.log(`Right-clicked column ${column + 1}`);
         }
     }
 
