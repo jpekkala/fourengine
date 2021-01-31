@@ -8,10 +8,22 @@ const BOARD_HEIGHT = 6;
 export default class Game {
 
     constructor(variation = '') {
+        this.savedState = '';
         this.setVariation(variation);
     }
 
+    get canUndo() {
+        return this.variation.length > 0;
+    }
+
+    get canRedo() {
+        return this.savedState > this.variation;
+    }
+
     setVariation(variation) {
+        if (!this.savedState.startsWith(variation)) {
+            this.savedState = variation;
+        }
         this.variation = variation;
         this.position = new wasm.Position(variation);
     }
@@ -48,6 +60,9 @@ export default class Game {
             throw Error(`Cannot drop in column "${ch}" because it is full`);
         }
         this.variation += ch;
+        if (!this.savedState.startsWith(this.variation)) {
+            this.savedState = this.variation;
+        }
         const row = this.position.getHeight(column);
         this.position = this.position.drop(column);
         return {
@@ -60,6 +75,16 @@ export default class Game {
         const previous = this.variation.substring(0, this.variation.length - 1);
         this.setVariation(previous);
     }
+
+    redo() {
+        const next = this.savedState.substring(0, this.variation.length + 1);
+        this.setVariation(next);
+    }
+
+    fastForward() {
+        this.setVariation(this.savedState);
+    }
+
 
     async solve() {
         return new Promise((resolve, reject) => {

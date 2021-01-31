@@ -9,8 +9,18 @@ export default class Board {
         this.cellSize = options.cellSize || 75;
         this.boardColor = options.boardColor || 'black';
         this.animationSpeedMs = options.animationSpeedMs || 200;
-        this.autoSolve = options.hasOwnProperty('autoSolve') ? options.autoSolve : true;
-        this.game = new Game(options.variation);
+        this.autoSolve = options.hasOwnProperty('autoSolve') ? options.autoSolve : false;
+
+        this.game = new Proxy(new Game(options.variation), {
+            set: (target, key, value) => {
+                target[key] = value;
+                if (key == 'variation') {
+                    this.setFormDisabled(false);
+                    this.variationInput.value = value;
+                }
+                return true;
+            }
+        });
         this.time = Date.now();
         this.drawBoard();
     }
@@ -137,22 +147,22 @@ export default class Board {
         if (type == 'undo' || type == 'fast-forward') {
             btnStyle += 'transform: rotateY(180deg);';
         }
-
+        
         if (type == 'undo' || type == 'redo') {
-            return `<button style="${btnStyle}" id="${type}_move">
+            return this.stringToHTML(`<button style="${btnStyle}" id="${type}_move">
                 <svg height="25" viewBox="-265 388.9 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path d="M-242.6,407l26.1,15.1c0.6,0.4,0.6,1.2,0,1.6l-26.1,15.1c-0.6,0.4-1.4-0.1-1.4-0.8v-30.2C-244,407.1-243.2,406.7-242.6,407z" />
                 </svg>
-            </button>`;
+            </button>`);
 
         } else if(type == 'rewind' || type == 'fast-forward') {
-            return `<button style="${btnStyle}" id="${type}_move">
+            return this.stringToHTML(`<button style="${btnStyle}" id="${type}_move">
                 <svg height="15" viewBox="0 0 554.239 554.239" xmlns="http://www.w3.org/2000/svg">
                     <path d="M512.084,86.498L314.819,215.25V110.983c0-26.805-18.874-37.766-42.155-24.479L17.46,253.065
                         c-23.28,13.287-23.28,34.824,0,48.11l255.204,166.562c23.281,13.286,42.155,2.325,42.155-24.48V338.985l197.266,128.753
                         c23.28,13.286,42.154,2.325,42.154-24.48V110.983C554.239,84.178,535.365,73.217,512.084,86.498z" />
                 </svg>
-            </button>`;
+            </button>`);
         }
     }
 
@@ -269,6 +279,7 @@ export default class Board {
     }
 
     async solve() {
+        if (this.solving) return;
         this.solving = true;
         document.getElementById('solution').innerHTML = 'Solving...';
         this.setFormDisabled(true);
@@ -303,11 +314,51 @@ export default class Board {
         const gameButtonsLeft = document.getElementById('game_buttons_left');
         gameButtonsLeft.appendChild(this.variationInput);
         gameButtonsLeft.appendChild(solveButton);
+
+        const gameButtonsRight = document.getElementById('game_buttons_right');
+        const rewindBtn = this.getGameBtn('rewind');
+        const undoBtn = this.getGameBtn('undo');
+        const redoBtn = this.getGameBtn('redo');
+        const ffBtn = this.getGameBtn('fast-forward');
+
+        rewindBtn.addEventListener('click', e => {
+            this.setVariation('');
+        });
+        undoBtn.addEventListener('click', e => {
+            this.game.undo();
+            this.drawBoard();
+            if (this.autoSolve) {
+                this.solve();
+            }
+        });
+        redoBtn.addEventListener('click', e => {
+            this.game.redo();
+            this.drawBoard();
+            if (this.autoSolve) {
+                this.solve();
+            }
+        });
+        ffBtn.addEventListener('click', e => {
+            this.game.fastForward();
+            this.drawBoard();
+            if (this.autoSolve) {
+                this.solve();
+            }
+        });
+        gameButtonsRight.appendChild(rewindBtn);
+        gameButtonsRight.appendChild(undoBtn);
+        gameButtonsRight.appendChild(redoBtn);
+        gameButtonsRight.appendChild(ffBtn);
+        this.setFormDisabled(false);
     }
 
     setFormDisabled(disabled) {
         document.getElementById('solve_button').disabled = disabled;
         document.getElementById('variation').disabled = disabled;
+        document.getElementById('rewind_move').disabled = disabled || !this.game.canUndo;
+        document.getElementById('undo_move').disabled = disabled || !this.game.canUndo;
+        document.getElementById('redo_move').disabled = disabled || !this.game.canRedo;
+        document.getElementById('fast-forward_move').disabled = disabled || !this.game.canRedo;
     }
 
     printSolution(solution) {
@@ -322,7 +373,6 @@ export default class Board {
 
     drop(column) {
         if (!this.game.canDrop(column)) return;
-        this.variationInput.value += column + 1;
         const pos = this.game.drop(column);
         if (this.autoSolve) {
             this.solve();
@@ -336,6 +386,9 @@ export default class Board {
         console.log('Setting variation:', variation);
         this.game.setVariation(variation);
         this.drawBoard();
+        if (this.autoSolve) {
+            this.solve();
+        }
     }
 
     stringToHTML(str) {
