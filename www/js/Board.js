@@ -337,6 +337,7 @@ export default class Board {
             if (this.autoSolve) {
                 this.solve();
             }
+            this.transformDiscs();
         });
         ffBtn.addEventListener('click', e => {
             this.game.fastForward();
@@ -344,6 +345,7 @@ export default class Board {
             if (this.autoSolve) {
                 this.solve();
             }
+            this.transformDiscs();
         });
         gameButtonsRight.appendChild(rewindBtn);
         gameButtonsRight.appendChild(undoBtn);
