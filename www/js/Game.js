@@ -85,7 +85,6 @@ export default class Game {
         this.setVariation(this.savedState);
     }
 
-
     async solve() {
         return new Promise((resolve, reject) => {
             const worker = new SearchWorker();

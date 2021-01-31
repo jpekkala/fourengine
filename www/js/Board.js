@@ -304,6 +304,11 @@ export default class Board {
         if (this.game.variation) {
             this.variationInput.value = this.game.variation;
         }
+        this.variationInput.addEventListener('keyup', e => {
+            if (e.key === 'Enter') {
+                this.setVariation(this.variationInput.value);
+            }
+        });
         const solveButton = this.stringToHTML(`<button style="height:30px;" id="solve_button">Solve</button>`);
         solveButton.addEventListener('click', e => {
             const variation = document.getElementById('variation').value;
