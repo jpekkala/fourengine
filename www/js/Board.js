@@ -219,7 +219,7 @@ export default class Board {
             </div>
             <div id="column_solutions" style="width:${width}px;margin:10px ${borderWidth}px;display:flex;flex-direction:row;"></div>
             <div style="width:${width}px;display:flex;flex-direction:row;justify-content:space-between;margin:0 ${borderWidth}px;">
-                <div id="game_buttons_left" style="display:flex;"></div>
+                <div id="game_buttons_left" style="display:flex;flex-direction:row;align-items:center;"></div>
                 <div id="game_buttons_right" style="display:flex;flex-direction:row;"></div>
             </div>
             <div id="solution" style="margin:10px ${borderWidth}px;"></div>
@@ -300,7 +300,7 @@ export default class Board {
             this.autoSolve = e.target.checked;
         });
 
-        this.variationInput = this.stringToHTML(`<input autocomplete="off" style="padding:5px 2px;font-size:14px;width:220px;" id="variation" />`);
+        this.variationInput = this.stringToHTML(`<input autocomplete="off" style="padding:5px 2px;font-size:14px;width:220px;box-sizing:border-box;${isFirefox ? 'height:28px;' : ''}" id="variation" />`);
         if (this.game.variation) {
             this.variationInput.value = this.game.variation;
         }
@@ -405,3 +405,5 @@ export default class Board {
         return n;
     }
 }
+
+const isFirefox = typeof InstallTrigger !== 'undefined';
