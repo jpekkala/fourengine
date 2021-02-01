@@ -147,7 +147,7 @@ export default class Board {
         if (type == 'undo' || type == 'fast-forward') {
             btnStyle += 'transform: rotateY(180deg);';
         }
-        
+
         if (type == 'undo' || type == 'redo') {
             return this.stringToHTML(`<button style="${btnStyle}" id="${type}_move">
                 <svg height="25" viewBox="-265 388.9 64 64" xmlns="http://www.w3.org/2000/svg">
@@ -155,7 +155,7 @@ export default class Board {
                 </svg>
             </button>`);
 
-        } else if(type == 'rewind' || type == 'fast-forward') {
+        } else if (type == 'rewind' || type == 'fast-forward') {
             return this.stringToHTML(`<button style="${btnStyle}" id="${type}_move">
                 <svg height="15" viewBox="0 0 554.239 554.239" xmlns="http://www.w3.org/2000/svg">
                     <path d="M512.084,86.498L314.819,215.25V110.983c0-26.805-18.874-37.766-42.155-24.479L17.46,253.065
@@ -189,7 +189,7 @@ export default class Board {
 
         const board = this.stringToHTML(`<div style="width:${width}px;">
             <div style="margin:0px ${borderWidth}px;">
-                <input type="checkbox" id="auto_solve" name="auto_solve" ${this.autoSolve ? 'checked' :''}>
+                <input type="checkbox" id="auto_solve" name="auto_solve" ${this.autoSolve ? 'checked' : ''}>
                 <label for="auto_solve">Auto solve</label>
             </div>
             <div style="width:${width}px;height:${height}px;margin-top:20px;border:${borderWidth}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
@@ -268,7 +268,9 @@ export default class Board {
     }
 
     mouseHandler(column, e) {
-        if (this.solving || this.game.hasWon()) return;
+        if (this.game.hasWon()) return;
+
+        document.getElementById('solution').innerHTML = '';
 
         if (e.which === 1) {
             console.log(`Clicked column ${column + 1}`);
@@ -279,10 +281,8 @@ export default class Board {
     }
 
     async solve() {
-        if (this.solving) return;
         this.solving = true;
         document.getElementById('solution').innerHTML = 'Solving...';
-        this.setFormDisabled(true);
         try {
             const solution = await this.game.solve();
             this.transformDiscs();
@@ -290,7 +290,6 @@ export default class Board {
             console.log('Solution is', solution);
         } finally {
             this.solving = false;
-            this.setFormDisabled(false);
         }
     }
 

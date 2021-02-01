@@ -87,8 +87,12 @@ export default class Game {
 
     async solve() {
         return new Promise((resolve, reject) => {
-            const worker = new SearchWorker();
-            worker.addEventListener('message', function (e) {
+            if (this.worker) {
+                this.worker.terminate();
+            }
+            this.worker = new SearchWorker();
+
+            this.worker.addEventListener('message', function (e) {
                 const type = e.data.type;
                 if (type === 'log') {
                     console.log(...e.data.args);
@@ -97,12 +101,13 @@ export default class Game {
                 } else if (type === 'reject') {
                     reject(e.data.error);
                 } else if (type === 'solution') {
+                    this.solving = false;
                     resolve(e.data);
                 } else {
                     console.error('Unhandled worker message', e);
                 }
             });
-            worker.postMessage({ variation: this.variation });
+            this.worker.postMessage({ variation: this.variation });
         })
     }
 }
