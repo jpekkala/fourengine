@@ -29,34 +29,45 @@ export default class Board {
         return this.game.getCellMatrix();
     }
 
-    getSvgDisc({ column, row, animate, animationSettings = {} }) {
-        const value = this.position[column * this.rows + row];
-        if (!value) return;
+    getSvgDisc({ fill, column, row, animate, animationSettings = {}, transformDiscs = true }) {
         const axis = this.cellSize / 2;
         const radius = axis * 0.9;
         const cy = this.rows * this.cellSize - axis - row * this.cellSize;
 
-        let color;
-        switch (value) {
-            case 1: color = 'player_one'; break;
-            case 2: color = 'player_two'; break;
-            case 3: color = 'winning_disc'; break;
-            default: return;
+        if (!fill) {
+            const value = this.position[column * this.rows + row];
+            switch (value) {
+                case 1: fill = 'url(#player_one)'; break;
+                case 2: fill = 'url(#player_two)'; break;
+                case 3: fill = 'url(#winning_disc)'; break;
+                default: return;
+            }
         }
 
         const circle = this.getNode('circle', {
             cx: axis,
             cy,
-            fill: `url(#${color})`,
+            fill,
             r: radius,
             id: `disc_${column}${row}`
         });
 
         if (animate) {
-            const svgTime = this.boardView.getCurrentTime() || (Date.now() - this.time) / 1000;
-            const animFrom = animationSettings.from || -axis;
-            const animTo = animationSettings.to || cy;
-            const duration = (cy + axis) / this.cellSize * this.animationSpeedMs;
+            const delay = animate == 'pop' ? (this.animationSpeedMs / 4 * row * 2) / 1000 : 0;
+            const svgTime = (this.boardView.getCurrentTime() || (Date.now() - this.time) / 1000) + delay;
+            // const animFrom = animationSettings.from || (animate == 'pop' ? cy - axis * 2 : -axis);
+            // const animTo = animationSettings.to || cy;
+            // FIXME when game supports pop
+            const animFrom = animationSettings.from || (animate == 'pop' ? cy : -axis);
+            const animTo = animationSettings.to || (animate == 'pop' ? cy + axis * 2 : cy);
+
+            console.log('animFrom', animFrom)
+            console.log('animTo', animTo)
+
+            const duration = animate == 'pop'
+                ? this.animationSpeedMs * 3
+                : (cy + axis) / this.cellSize * this.animationSpeedMs;
+
             const animation = this.getNode('animate', {
                 attributeName: 'cy',
                 from: animFrom,
@@ -64,11 +75,17 @@ export default class Board {
                 dur: `${duration}ms`,
                 begin: `${svgTime}s`,
                 fill: 'freeze'
-            })
+            });
 
             animation.addEventListener('endEvent', () => {
                 this.animating--;
-                this.transformDiscs();
+                if (row == -1) {
+                    circle.remove();
+                }
+
+                if (transformDiscs) {
+                    this.transformDiscs();
+                }
             });
 
             circle.appendChild(animation);
@@ -76,6 +93,25 @@ export default class Board {
         }
 
         return circle;
+    }
+
+    getSvgColumn(col) {
+        const column = this.getNode('svg', {
+            x: this.cellSize * col,
+            y: 0,
+            id: `column_${col}`
+        });
+        column.addEventListener('mousedown', e => this.mouseHandler(col, e));
+
+        const mask = this.getNode('rect', {
+            width: this.cellSize,
+            height: this.rows * this.cellSize,
+            fill: this.boardColor,
+            mask: 'url(#column_mask)'
+        });
+        column.appendChild(mask);
+
+        return column;
     }
 
     getSolutionIndicator(type) {
@@ -87,7 +123,7 @@ export default class Board {
             red: '#F40000',
             blue: '#526BE1',
             draw: '#FBFB00',
-        }
+        };
 
         const elem = this.stringToHTML(`<div style="width:${width}px;background:${colors[type] || 'black'};border-radius:4px;box-shadow: -1px 0 3px 0 rgba(0, 0, 0, .5);display:flex;justify-content:center;align-items:center;"></div>`);
 
@@ -229,28 +265,14 @@ export default class Board {
         this.solutionsView = board.querySelector('#column_solutions');
 
         for (let i = 0; i < this.cols; i++) {
-            // Board columns
-            const column = this.getNode('svg', {
-                x: this.cellSize * i,
-                y: 0,
-                id: `column_${i}`
-            });
-
-            column.addEventListener('mousedown', e => this.mouseHandler(i, e));
+            // Columns
+            const column = this.getSvgColumn(i);
             this.boardView.appendChild(column);
 
             for (let j = 0; j < this.rows; j++) {
                 const disc = this.getSvgDisc({ column: i, row: j });
                 if (disc) column.appendChild(disc);
             }
-
-            const mask = this.getNode('rect', {
-                width: this.cellSize,
-                height,
-                fill: this.boardColor,
-                mask: 'url(#column_mask)'
-            });
-            column.appendChild(mask);
 
             // Column solutions
             const solution = this.stringToHTML(`
@@ -264,7 +286,31 @@ export default class Board {
     }
 
     pop(column) {
-        // Replace column
+        const svgColumn = document.getElementById(`column_${column}`);
+
+        const poppedDisc = document.getElementById(`disc_${column}0`);
+        const discY = poppedDisc.firstChild.getAttribute('to');
+
+        console.log('discY', discY)
+
+        const disc = this.getSvgDisc({
+            column,
+            row: -1,
+            fill: poppedDisc.getAttribute('fill'),
+            animate: 'pop',
+        });
+
+        while (svgColumn.childNodes.length > 1) {
+            svgColumn.removeChild(svgColumn.firstChild);
+        }
+
+        svgColumn.insertBefore(disc, svgColumn.firstChild);
+
+        // FIXME when game supports pop
+        for (let i = 1; i < this.rows; i++) {
+            const disc = this.getSvgDisc({ column, row: i, animate: 'pop', transformDiscs: false });
+            if (disc) svgColumn.insertBefore(disc, svgColumn.firstChild);
+        }
     }
 
     mouseHandler(column, e) {
@@ -277,6 +323,7 @@ export default class Board {
             this.drop(column);
         } else if (e.which === 3) {
             console.log(`Right-clicked column ${column + 1}`);
+            this.pop(column);
         }
     }
 
@@ -383,7 +430,7 @@ export default class Board {
         if (this.autoSolve) {
             this.solve();
         }
-        const animatedDisc = this.getSvgDisc({ ...pos, animate: true });
+        const animatedDisc = this.getSvgDisc({ ...pos, animate: 'drop' });
         const boardColumn = document.getElementById(`column_${column}`);
         boardColumn.insertBefore(animatedDisc, boardColumn.firstChild);
     }
