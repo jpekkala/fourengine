@@ -8,7 +8,7 @@ export default class Board {
         this.rows = options.rows || 6;
         this.cellSize = options.cellSize || 75;
         this.boardColor = options.boardColor || 'black';
-        this.animationSpeedMs = options.animationSpeedMs || 200;
+        this.animationSpeedMs = options.animationSpeedMs || 20;
         this.autoSolve = options.hasOwnProperty('autoSolve') ? options.autoSolve : false;
 
         this.game = new Proxy(new Game(options.variation), {
