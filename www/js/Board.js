@@ -21,7 +21,6 @@ export default class Board {
                 return true;
             }
         });
-        this.time = Date.now();
         this.drawBoard();
     }
 
@@ -213,7 +212,12 @@ export default class Board {
         }
     }
 
+    /**
+     * Recreates SVG elements and related HTML elements. Calling this resets any existing animations so it's not safe
+     * to call just in case.
+     */
     drawBoard() {
+        this.time = Date.now();
         this.animating = 0;
         this.container.innerHTML = '';
         const width = this.cols * this.cellSize;
