@@ -1,3 +1,4 @@
+// Web workers don't have access to console. Instead we'll send messages to the main thread and print them there
 self.console = {
     log() {
         postMessage({

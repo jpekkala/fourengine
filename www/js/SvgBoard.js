@@ -1,9 +1,15 @@
 import Game from './Game';
 
-export default class Board {
+/**
+ * Draws the game state using SVG and also adds some HTML controls around the board.
+ */
+export default class SvgBoard {
 
     constructor(options = {}) {
-        this.container = options.container || document.querySelector('#c4_board');
+        if (!(options.container instanceof Element)) {
+            throw Error('Container must be a DOM element where the SVG board is appended')
+        }
+        this.container = options.container
         this.cols = options.cols || 7;
         this.rows = options.rows || 6;
         this.cellSize = options.cellSize || 75;
@@ -21,7 +27,6 @@ export default class Board {
                 return true;
             }
         });
-        this.drawBoard();
     }
 
     get position() {

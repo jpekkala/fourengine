@@ -5,6 +5,10 @@ import * as wasm from 'fourengine';
 const BOARD_WIDTH = 7;
 const BOARD_HEIGHT = 6;
 
+/**
+ * The game state which consists of the current position and methods to manipulate that. This class wraps and hides the
+ * underlying Wasm types for ease of use.
+ */
 export default class Game {
 
     constructor(variation = '') {
