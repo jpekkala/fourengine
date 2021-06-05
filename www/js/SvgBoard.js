@@ -239,7 +239,7 @@ export default class SvgBoard {
                 <input type="checkbox" id="auto_solve" name="auto_solve" ${this.autoSolve ? 'checked' : ''}>
                 <label for="auto_solve">Auto solve</label>
             </div>
-            <div style="width:${width}px;height:${height}px;margin-top:20px;border:${borderWidth}px solid ${this.boardColor};border-radius:${axis}px;" oncontextmenu="return false;">
+            <div style="width:${width}px;height:${height}px;margin-top:20px;border:${borderWidth}px solid ${this.boardColor};border-radius:${axis}px;box-sizing:content-box" oncontextmenu="return false;">
                 <svg width="${width}px" viewBox="0 0 ${width} ${height}" id="board_view">
                     <defs>
                         <pattern id="grid_pattern" patternUnits="userSpaceOnUse" width="${this.cellSize}" height="${this.cellSize}">
