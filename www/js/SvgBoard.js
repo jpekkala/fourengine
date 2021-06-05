@@ -295,9 +295,9 @@ export default class SvgBoard {
     }
 
     pop(column) {
-        const svgColumn = document.getElementById(`column_${column}`);
+        const svgColumn = this.container.querySelector(`#column_${column}`);
 
-        const poppedDisc = document.getElementById(`disc_${column}0`);
+        const poppedDisc = this.container.querySelector(`#disc_${column}0`);
         const discY = poppedDisc.firstChild.getAttribute('to');
 
         console.log('discY', discY)
@@ -325,7 +325,7 @@ export default class SvgBoard {
     mouseHandler(column, e) {
         if (this.game.hasWon()) return;
 
-        document.getElementById('solution').innerHTML = '';
+        this.container.querySelector('#solution').innerHTML = '';
 
         if (e.which === 1) {
             console.log(`Clicked column ${column + 1}`);
@@ -338,7 +338,7 @@ export default class SvgBoard {
 
     async solve() {
         this.solving = true;
-        document.getElementById('solution').innerHTML = 'Solving...';
+        this.container.querySelector('#solution').innerHTML = 'Solving...';
         try {
             const solution = await this.game.solve();
             this.transformDiscs();
@@ -350,7 +350,7 @@ export default class SvgBoard {
     }
 
     attachButtons() {
-        const autoSolveChkbox = document.getElementById('auto_solve');
+        const autoSolveChkbox = this.container.querySelector('#auto_solve');
         autoSolveChkbox.addEventListener('click', e => {
             this.autoSolve = e.target.checked;
         });
@@ -366,16 +366,16 @@ export default class SvgBoard {
         });
         const solveButton = this.stringToHTML(`<button style="height:30px;" id="solve_button">Solve</button>`);
         solveButton.addEventListener('click', e => {
-            const variation = document.getElementById('variation').value;
+            const variation = this.container.querySelector('#variation').value;
             this.setVariation(variation);
             this.solve();
         });
 
-        const gameButtonsLeft = document.getElementById('game_buttons_left');
+        const gameButtonsLeft = this.container.querySelector('#game_buttons_left');
         gameButtonsLeft.appendChild(this.variationInput);
         gameButtonsLeft.appendChild(solveButton);
 
-        const gameButtonsRight = document.getElementById('game_buttons_right');
+        const gameButtonsRight = this.container.querySelector('#game_buttons_right');
         const rewindBtn = this.getGameBtn('rewind');
         const undoBtn = this.getGameBtn('undo');
         const redoBtn = this.getGameBtn('redo');
@@ -415,12 +415,12 @@ export default class SvgBoard {
     }
 
     setFormDisabled(disabled) {
-        document.getElementById('solve_button').disabled = disabled;
-        document.getElementById('variation').disabled = disabled;
-        document.getElementById('rewind_move').disabled = disabled || !this.game.canUndo;
-        document.getElementById('undo_move').disabled = disabled || !this.game.canUndo;
-        document.getElementById('redo_move').disabled = disabled || !this.game.canRedo;
-        document.getElementById('fast-forward_move').disabled = disabled || !this.game.canRedo;
+        this.container.querySelector('#solve_button').disabled = disabled;
+        this.container.querySelector('#variation').disabled = disabled;
+        this.container.querySelector('#rewind_move').disabled = disabled || !this.game.canUndo;
+        this.container.querySelector('#undo_move').disabled = disabled || !this.game.canUndo;
+        this.container.querySelector('#redo_move').disabled = disabled || !this.game.canRedo;
+        this.container.querySelector('#fast-forward_move').disabled = disabled || !this.game.canRedo;
     }
 
     printSolution(solution) {
@@ -430,7 +430,7 @@ export default class SvgBoard {
             <span style="font-weight:bold;">Elapsed time:</span> ${solution.duration.toFixed(3)} s<br/>
             <span style="font-weight:bold;">Nodes per second:</span> ${solution.nps.toLocaleString()}<br/>
         </div>`;
-        document.getElementById('solution').innerHTML = description;
+        this.container.querySelector('#solution').innerHTML = description;
     }
 
     drop(column) {
@@ -440,7 +440,7 @@ export default class SvgBoard {
             this.solve();
         }
         const animatedDisc = this.getSvgDisc({ ...pos, animate: 'drop' });
-        const boardColumn = document.getElementById(`column_${column}`);
+        const boardColumn = this.container.querySelector(`#column_${column}`);
         boardColumn.insertBefore(animatedDisc, boardColumn.firstChild);
     }
 
