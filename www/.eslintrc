@@ -1,0 +1,18 @@
+{
+  "extends": "eslint:recommended",
+  "rules": {
+    "eqeqeq": ["error", "smart"],
+    "indent": ["warn", 4, { "SwitchCase": 1 }],
+    "quotes": ["warn", "single"],
+    "semi": ["warn", "always"]
+  },
+  "env": {
+    "browser": true,
+    "es2020": true,
+    "node": true
+  },
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "ignorePatterns": ["pkg"]
+}

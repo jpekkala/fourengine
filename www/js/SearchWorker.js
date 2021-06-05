@@ -13,9 +13,9 @@ self.console = {
             args: [...arguments],
         });
     }
-}
+};
 
-const enginePromise = import("fourengine-wasm").then(wasm => {
+const enginePromise = import('fourengine-wasm').then(wasm => {
     return new wasm.Engine();
 }).catch(error => {
     console.error('Failed to load wasm', error);
@@ -35,12 +35,12 @@ self.onmessage = async function (e) {
             score: struct.getScore(),
             workCount: struct.getWorkCount(),
             nps: Math.round(struct.getWorkCount() / duration),
-        }
+        };
         postMessage(message);
     } catch (error) {
         postMessage({
             type: 'reject',
             error,
-        })
+        });
     }
 };

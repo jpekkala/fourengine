@@ -72,7 +72,7 @@ export default class GameModel {
         return {
             column,
             row,
-        }
+        };
     }
 
     undo() {
@@ -112,6 +112,6 @@ export default class GameModel {
                 }
             });
             this.worker.postMessage({ variation: this.variation });
-        })
+        });
     }
 }

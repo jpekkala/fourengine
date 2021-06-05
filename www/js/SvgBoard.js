@@ -5,24 +5,24 @@ export default class SvgBoard {
 
     constructor(options = {}) {
         if (!(options.container instanceof Element)) {
-            throw Error('Container must be a DOM element where the SVG board is appended')
+            throw Error('Container must be a DOM element where the SVG board is appended');
         }
-        this.container = options.container
+        this.container = options.container;
         this.cols = options.cols || 7;
         this.rows = options.rows || 6;
         this.cellSize = options.cellSize || 75;
         this.boardColor = options.boardColor || 'black';
         this.animationSpeedMs = options.animationSpeedMs || 20;
-        this.autoSolve = options.hasOwnProperty('autoSolve') ? options.autoSolve : false;
+        this.autoSolve = Boolean(options.autoSolve);
 
         if (!options.game) {
-            throw Error('Game missing')
+            throw Error('Game missing');
         }
         // TODO: remove this because it depends on implementation details
         this.game = new Proxy(options.game, {
             set: (target, key, value) => {
                 target[key] = value;
-                if (key == 'variation') {
+                if (key === 'variation') {
                     this.setFormDisabled(false);
                     this.variationInput.value = value;
                 }
@@ -59,18 +59,18 @@ export default class SvgBoard {
         });
 
         if (animate) {
-            const delay = animate == 'pop' ? (this.animationSpeedMs / 4 * row * 2) / 1000 : 0;
+            const delay = animate === 'pop' ? (this.animationSpeedMs / 4 * row * 2) / 1000 : 0;
             const svgTime = (this.boardView.getCurrentTime() || (Date.now() - this.time) / 1000) + delay;
             // const animFrom = animationSettings.from || (animate == 'pop' ? cy - axis * 2 : -axis);
             // const animTo = animationSettings.to || cy;
             // FIXME when game supports pop
-            const animFrom = animationSettings.from || (animate == 'pop' ? cy : -axis);
-            const animTo = animationSettings.to || (animate == 'pop' ? cy + axis * 2 : cy);
+            const animFrom = animationSettings.from || (animate === 'pop' ? cy : -axis);
+            const animTo = animationSettings.to || (animate === 'pop' ? cy + axis * 2 : cy);
 
-            console.log('animFrom', animFrom)
-            console.log('animTo', animTo)
+            console.log('animFrom', animFrom);
+            console.log('animTo', animTo);
 
-            const duration = animate == 'pop'
+            const duration = animate === 'pop'
                 ? this.animationSpeedMs * 3
                 : (cy + axis) / this.cellSize * this.animationSpeedMs;
 
@@ -85,7 +85,7 @@ export default class SvgBoard {
 
             animation.addEventListener('endEvent', () => {
                 this.animating--;
-                if (row == -1) {
+                if (row === -1) {
                     circle.remove();
                 }
 
@@ -186,18 +186,18 @@ export default class SvgBoard {
 
     getGameBtn(type) {
         let btnStyle = 'width: 50px; height: 30px; display: flex; align-items: center; justify-content: center;';
-        if (type == 'undo' || type == 'fast-forward') {
+        if (type === 'undo' || type === 'fast-forward') {
             btnStyle += 'transform: rotateY(180deg);';
         }
 
-        if (type == 'undo' || type == 'redo') {
+        if (type === 'undo' || type === 'redo') {
             return this.stringToHTML(`<button style="${btnStyle}" id="${type}_move">
                 <svg height="25" viewBox="-265 388.9 64 64" xmlns="http://www.w3.org/2000/svg">
                     <path d="M-242.6,407l26.1,15.1c0.6,0.4,0.6,1.2,0,1.6l-26.1,15.1c-0.6,0.4-1.4-0.1-1.4-0.8v-30.2C-244,407.1-243.2,406.7-242.6,407z" />
                 </svg>
             </button>`);
 
-        } else if (type == 'rewind' || type == 'fast-forward') {
+        } else if (type === 'rewind' || type === 'fast-forward') {
             return this.stringToHTML(`<button style="${btnStyle}" id="${type}_move">
                 <svg height="15" viewBox="0 0 554.239 554.239" xmlns="http://www.w3.org/2000/svg">
                     <path d="M512.084,86.498L314.819,215.25V110.983c0-26.805-18.874-37.766-42.155-24.479L17.46,253.065
@@ -302,7 +302,7 @@ export default class SvgBoard {
         const poppedDisc = this.container.querySelector(`#disc_${column}0`);
         const discY = poppedDisc.firstChild.getAttribute('to');
 
-        console.log('discY', discY)
+        console.log('discY', discY);
 
         const disc = this.getSvgDisc({
             column,
@@ -366,8 +366,8 @@ export default class SvgBoard {
                 this.setVariation(this.variationInput.value);
             }
         });
-        const solveButton = this.stringToHTML(`<button style="height:30px;" id="solve_button">Solve</button>`);
-        solveButton.addEventListener('click', e => {
+        const solveButton = this.stringToHTML('<button style="height:30px;" id="solve_button">Solve</button>');
+        solveButton.addEventListener('click', () => {
             const variation = this.container.querySelector('#variation').value;
             this.setVariation(variation);
             this.solve();
@@ -383,17 +383,17 @@ export default class SvgBoard {
         const redoBtn = this.getGameBtn('redo');
         const ffBtn = this.getGameBtn('fast-forward');
 
-        rewindBtn.addEventListener('click', e => {
+        rewindBtn.addEventListener('click', () => {
             this.setVariation('');
         });
-        undoBtn.addEventListener('click', e => {
+        undoBtn.addEventListener('click', () => {
             this.game.undo();
             this.drawBoard();
             if (this.autoSolve) {
                 this.solve();
             }
         });
-        redoBtn.addEventListener('click', e => {
+        redoBtn.addEventListener('click', () => {
             this.game.redo();
             this.drawBoard();
             if (this.autoSolve) {
@@ -401,7 +401,7 @@ export default class SvgBoard {
             }
             this.transformDiscs();
         });
-        ffBtn.addEventListener('click', e => {
+        ffBtn.addEventListener('click', () => {
             this.game.fastForward();
             this.drawBoard();
             if (this.autoSolve) {
