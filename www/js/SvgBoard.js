@@ -1,5 +1,3 @@
-import Game from './Game';
-
 /**
  * Draws the game state using SVG and also adds some HTML controls around the board.
  */
@@ -17,7 +15,11 @@ export default class SvgBoard {
         this.animationSpeedMs = options.animationSpeedMs || 20;
         this.autoSolve = options.hasOwnProperty('autoSolve') ? options.autoSolve : false;
 
-        this.game = new Proxy(new Game(options.variation), {
+        if (!options.game) {
+            throw Error('Game missing')
+        }
+        // TODO: remove this because it depends on implementation details
+        this.game = new Proxy(options.game, {
             set: (target, key, value) => {
                 target[key] = value;
                 if (key == 'variation') {

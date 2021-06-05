@@ -1,6 +1,6 @@
 import SearchWorker from 'worker-loader!./SearchWorker';
 // TODO: This is fetched twice because the web worker also needs it. Figure out how to share it with web worker
-import * as wasm from 'fourengine';
+import * as wasm from 'fourengine-wasm';
 
 const BOARD_WIDTH = 7;
 const BOARD_HEIGHT = 6;
@@ -9,7 +9,7 @@ const BOARD_HEIGHT = 6;
  * The game state which consists of the current position and methods to manipulate that. This class wraps and hides the
  * underlying Wasm types for ease of use.
  */
-export default class Game {
+export default class GameModel {
 
     constructor(variation = '') {
         this.savedState = '';
