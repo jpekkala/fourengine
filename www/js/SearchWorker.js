@@ -15,7 +15,7 @@ self.console = {
     }
 };
 
-const enginePromise = import('fourengine-wasm').then(wasm => {
+const enginePromise = import('../pkg/fourengine_wasm.js').then(wasm => {
     return new wasm.Engine();
 }).catch(error => {
     console.error('Failed to load wasm', error);
