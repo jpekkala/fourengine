@@ -1,7 +1,6 @@
 #![allow(clippy::comparison_chain)]
 
 use crate::bitboard::{Bitboard, MoveBitmap, Position, BOARD_HEIGHT, BOARD_WIDTH};
-#[cfg(feature = "book")]
 use crate::book::Book;
 use crate::heuristic::{FixedHeuristic, Heuristic};
 use crate::score::Score;
@@ -13,8 +12,7 @@ pub struct Engine {
     pub work_count: usize,
     pub heuristic: FixedHeuristic,
     ply: u32,
-    #[cfg(feature = "book")]
-    book: Book,
+    book: Option<Box<Book>>
 }
 
 #[derive(Clone, Copy)]
@@ -72,9 +70,12 @@ impl Engine {
             work_count: 0,
             heuristic: FixedHeuristic {},
             ply: 0,
-            #[cfg(feature = "book")]
-            book: Book::open_for_ply_or_empty(8)
+            book: None
         }
+    }
+
+    pub fn set_book(&mut self, book: Box<Book>) {
+        self.book = Some(book);
     }
 
     pub fn reset(&mut self) {
@@ -212,11 +213,11 @@ impl Engine {
             }
         }
 
-        #[cfg(feature = "book")]
-        {
-            if self.ply == 8 {
+        if self.ply == 8 {
+            // TODO: This check slows down the engine a bit too much when the book is disabled
+            if let Some(book) = &self.book {
                 let (position, _) = self.position.normalize();
-                let book_score = self.book.get(&position);
+                let book_score = book.get(&position);
                 if book_score != Score::Unknown {
                     return book_score;
                 }

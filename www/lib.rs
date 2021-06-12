@@ -1,4 +1,5 @@
 use fourengine::bitboard::{Bitboard, Disc, Position};
+use fourengine::book::Book;
 use fourengine::engine::Engine;
 use fourengine::score::Score;
 use wasm_bindgen::prelude::*;
@@ -72,6 +73,12 @@ impl JsEngine {
         JsEngine {
             engine: Engine::new(),
         }
+    }
+
+    #[wasm_bindgen(js_name = setBook)]
+    pub fn set_book(&mut self, data: &str) {
+        let book = Box::new(Book::from_lines(data));
+        self.engine.set_book(book);
     }
 
     #[wasm_bindgen]

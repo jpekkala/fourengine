@@ -11,7 +11,9 @@ module.exports = {
     plugins: [
         new CopyWebpackPlugin({
             patterns: [{
-                from: 'public/index.html'
+                from: 'public/index.html',
+            }, {
+                from: '../books/8-ply.txt',
             }]
         })
     ],

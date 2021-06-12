@@ -1,6 +1,6 @@
 use crate::benchmark::Benchmark;
 use crate::bitboard::Position;
-use crate::book::{DEFAULT_BOOK_PLY, generate_book, get_path_for_ply, verify_book};
+use crate::book::{Book, DEFAULT_BOOK_PLY, generate_book, get_path_for_ply, verify_book};
 use crate::engine::Engine;
 use crate::score::Score;
 use clap::{App, Arg};
@@ -127,13 +127,11 @@ fn main() {
             Err(str) => eprintln!("{}", str),
         }
     } else {
-        #[cfg(feature = "book")]
-            {
-                let path_buf = get_path_for_ply(DEFAULT_BOOK_PLY);
-                if !path_buf.as_path().exists() {
-                    println!("The book file {} does not exist. You can generate it with --generate-book", path_buf.display());
-                }
-            }
+        let path_buf = get_path_for_ply(DEFAULT_BOOK_PLY);
+        let book_exists = path_buf.as_path().exists();
+        if !book_exists {
+            println!("The book file {} does not exist. You can generate it with --generate-book", path_buf.display());
+        }
 
         let variation = match matches.value_of("variation") {
             Some(variation) => String::from(variation),
@@ -158,7 +156,12 @@ fn main() {
             position,
         );
         println!("Solving...");
+
         let mut engine = Engine::new();
+        if book_exists {
+            let book = Box::new(Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY));
+            engine.set_book(book);
+        }
         let benchmark = run_variation(&mut engine, &variation);
         match benchmark {
             Ok(benchmark) => benchmark.print(),

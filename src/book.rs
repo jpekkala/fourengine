@@ -34,10 +34,16 @@ impl Book {
         Book::open(&get_path_for_ply(ply)).unwrap_or(Book::empty())
     }
 
+    pub fn from_lines(data: &str) -> Book {
+        let mut book = Book::empty();
+        for line in data.lines() {
+            book.include_line(&line);
+        }
+        book
+    }
+
     pub fn open(file_path: &Path) -> Result<Book, std::io::Error> {
-        let mut book = Book {
-            map: HashMap::new(),
-        };
+        let mut book = Book::empty();
         let file = File::open(file_path)?;
         for line in BufReader::new(file).lines() {
             let line = line?;

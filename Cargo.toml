@@ -5,8 +5,7 @@ authors = ["Jukka Pekkala", "Johan Nordlund"]
 edition = "2018"
 
 [features]
-default = ["clap", "book"]
-book = []
+default = ["clap"]
 
 [lib]
 name = "fourengine"
