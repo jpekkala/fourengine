@@ -6,12 +6,13 @@ use core::mem;
 use std::collections::{BTreeSet, HashMap};
 use std::fs::{create_dir_all, File};
 use std::io::{BufRead, BufReader, LineWriter, Write};
+use std::path::{Path, PathBuf};
 
-const DEFAULT_PLY: u32 = 8;
-const BOOK_FOLDER: &str = "books";
+pub const DEFAULT_BOOK_PLY: u32 = 8;
+pub const BOOK_FOLDER: &str = "books";
 
-fn get_book_file(ply: u32) -> String {
-    format!("{}/{}-ply.txt", BOOK_FOLDER, ply)
+pub fn get_path_for_ply(ply: u32) -> PathBuf {
+    PathBuf::from(BOOK_FOLDER).join(format!("{}-ply.txt", ply))
 }
 
 pub struct Book {
@@ -26,14 +27,18 @@ impl Book {
     }
 
     pub fn open_for_ply(ply: u32) -> Result<Book, std::io::Error> {
-        Book::open(&get_book_file(ply))
+        Book::open(&get_path_for_ply(ply))
     }
 
-    pub fn open(file_name: &str) -> Result<Book, std::io::Error> {
+    pub fn open_for_ply_or_empty(ply: u32) -> Book {
+        Book::open(&get_path_for_ply(ply)).unwrap_or(Book::empty())
+    }
+
+    pub fn open(file_path: &Path) -> Result<Book, std::io::Error> {
         let mut book = Book {
             map: HashMap::new(),
         };
-        let file = File::open(file_name)?;
+        let file = File::open(file_path)?;
         for line in BufReader::new(file).lines() {
             let line = line?;
             if !line.trim().is_empty() {
@@ -128,11 +133,11 @@ struct BookWriter {
 
 impl BookWriter {
     fn create_for_ply(ply: u32) -> Result<BookWriter, std::io::Error> {
-        BookWriter::create(&get_book_file(ply))
+        BookWriter::create(&get_path_for_ply(ply))
     }
 
-    fn create(file_name: &str) -> Result<BookWriter, std::io::Error> {
-        let file = File::create(file_name)?;
+    fn create(file_path: &Path) -> Result<BookWriter, std::io::Error> {
+        let file = File::create(file_path)?;
         Ok(BookWriter {
             file: LineWriter::new(file),
             engine: Engine::new(),
@@ -160,14 +165,14 @@ pub fn generate_book() -> Result<(), std::io::Error> {
     let total_count = set.len();
     println!("There are {} positions to solve", total_count);
 
-    let existing_book = Book::open_for_ply(DEFAULT_PLY).unwrap_or_else(|_err| Book::empty());
+    let existing_book = Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY);
     if !existing_book.is_empty() {
         println!("Found {} existing positions", existing_book.len());
     }
 
     let mut total_benchmark = Benchmark::empty();
     let mut solved = 0;
-    let mut book_writer = BookWriter::create_for_ply(DEFAULT_PLY)?;
+    let mut book_writer = BookWriter::create_for_ply(DEFAULT_BOOK_PLY)?;
     for (count, pos) in set.into_iter().enumerate() {
         if let Some(score) = existing_book.map.get(&pos) {
             book_writer.write_entry(pos, *score)?;
@@ -194,8 +199,8 @@ pub fn generate_book() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-pub fn verify_book(reference_book: &str) -> Result<(), std::io::Error> {
-    let book = Book::open_for_ply(DEFAULT_PLY)?;
+pub fn verify_book(reference_book: &Path) -> Result<(), std::io::Error> {
+    let book = Book::open_for_ply(DEFAULT_BOOK_PLY)?;
     let reference_book = Book::open(reference_book)?;
 
     let mut missing_count = 0;

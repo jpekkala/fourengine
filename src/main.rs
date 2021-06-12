@@ -1,6 +1,6 @@
 use crate::benchmark::Benchmark;
 use crate::bitboard::Position;
-use crate::book::{generate_book, verify_book};
+use crate::book::{DEFAULT_BOOK_PLY, generate_book, get_path_for_ply, verify_book};
 use crate::engine::Engine;
 use crate::score::Score;
 use clap::{App, Arg};
@@ -8,6 +8,7 @@ use std::cmp::Ordering;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
 
 pub mod benchmark;
 pub mod bitboard;
@@ -121,11 +122,19 @@ fn main() {
             Err(str) => eprintln!("{}", str),
         }
     } else if let Some(reference_book) = matches.value_of("verify_book") {
-        match verify_book(reference_book) {
+        match verify_book(Path::new(reference_book)) {
             Ok(_) => {}
             Err(str) => eprintln!("{}", str),
         }
     } else {
+        #[cfg(feature = "book")]
+            {
+                let path_buf = get_path_for_ply(DEFAULT_BOOK_PLY);
+                if !path_buf.as_path().exists() {
+                    println!("The book file {} does not exist. You can generate it with --generate-book", path_buf.display());
+                }
+            }
+
         let variation = match matches.value_of("variation") {
             Some(variation) => String::from(variation),
             None => {

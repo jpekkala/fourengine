@@ -73,7 +73,7 @@ impl Engine {
             heuristic: FixedHeuristic {},
             ply: 0,
             #[cfg(feature = "book")]
-            book: Book::open_for_ply(8).unwrap(),
+            book: Book::open_for_ply_or_empty(8)
         }
     }
 
