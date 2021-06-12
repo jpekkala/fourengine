@@ -9,6 +9,13 @@ module.exports = {
     },
     mode: 'development',
     plugins: [
-        new CopyWebpackPlugin(['public/index.html'])
+        new CopyWebpackPlugin({
+            patterns: [{
+                from: 'public/index.html'
+            }]
+        })
     ],
+    experiments: {
+        asyncWebAssembly: true,
+    }
 };
