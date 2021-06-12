@@ -1,4 +1,3 @@
-import SearchWorker from 'worker-loader!./SearchWorker';
 // TODO: This is fetched twice because the web worker also needs it. Figure out how to share it with web worker
 import * as wasm from '../pkg/fourengine_wasm.js';
 
@@ -25,6 +24,9 @@ export default class GameModel {
     }
 
     setVariation(variation) {
+        if (this.variation === variation) {
+            return;
+        }
         if (!this.savedState.startsWith(variation)) {
             this.savedState = variation;
         }
@@ -63,12 +65,8 @@ export default class GameModel {
         if (!this.canDrop(column)) {
             throw Error(`Cannot drop in column "${ch}" because it is full`);
         }
-        this.variation += ch;
-        if (!this.savedState.startsWith(this.variation)) {
-            this.savedState = this.variation;
-        }
         const row = this.position.getHeight(column);
-        this.position = this.position.drop(column);
+        this.setVariation(this.variation + ch);
         return {
             column,
             row,
@@ -89,29 +87,21 @@ export default class GameModel {
         this.setVariation(this.savedState);
     }
 
-    async solve() {
-        return new Promise((resolve, reject) => {
-            if (this.worker) {
-                this.worker.terminate();
-            }
-            this.worker = new SearchWorker();
+    setSolver(solver) {
+        this.solver = solver;
+    }
 
-            this.worker.addEventListener('message', function (e) {
-                const type = e.data.type;
-                if (type === 'log') {
-                    console.log(...e.data.args);
-                } else if (type === 'error') {
-                    console.error(...e.data.args);
-                } else if (type === 'reject') {
-                    reject(e.data.error);
-                } else if (type === 'solution') {
-                    this.solving = false;
-                    resolve(e.data);
-                } else {
-                    console.error('Unhandled worker message', e);
-                }
-            });
-            this.worker.postMessage({ variation: this.variation });
-        });
+    async solve() {
+        if (this.solver) {
+            return await this.solver.solve(this.variation);
+        } else {
+            return {
+                score: 'Unknown',
+            };
+        }
+    }
+
+    stopSolve() {
+        this.solver?.stop();
     }
 }

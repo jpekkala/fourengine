@@ -1,3 +1,7 @@
+/**
+ * Runs the Connect-4 engine in a separate thread. This file wraps and prepares the engine which itself is in Wasm.
+ */
+
 // Web workers don't have access to console. Instead we'll send messages to the main thread and print them there
 self.console = {
     log() {
@@ -16,6 +20,7 @@ self.console = {
 };
 
 const enginePromise = import('../pkg/fourengine_wasm.js').then(wasm => {
+    console.log('Wasm loaded');
     return new wasm.Engine();
 }).catch(error => {
     console.error('Failed to load wasm', error);
@@ -40,7 +45,7 @@ self.onmessage = async function (e) {
     } catch (error) {
         postMessage({
             type: 'reject',
-            error,
+            error: error.message,
         });
     }
 };

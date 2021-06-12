@@ -29,6 +29,7 @@ export default class SvgBoard {
                 return true;
             }
         });
+        this.solveCount = 0;
     }
 
     get position() {
@@ -66,9 +67,6 @@ export default class SvgBoard {
             // FIXME when game supports pop
             const animFrom = animationSettings.from || (animate === 'pop' ? cy : -axis);
             const animTo = animationSettings.to || (animate === 'pop' ? cy + axis * 2 : cy);
-
-            console.log('animFrom', animFrom);
-            console.log('animTo', animTo);
 
             const duration = animate === 'pop'
                 ? this.animationSpeedMs * 3
@@ -341,13 +339,23 @@ export default class SvgBoard {
     async solve() {
         this.solving = true;
         this.container.querySelector('#solution').innerHTML = 'Solving...';
+        const solveId = ++this.solveCount;
         try {
             const solution = await this.game.solve();
-            this.transformDiscs();
-            this.printSolution(solution);
-            console.log('Solution is', solution);
+            if (solveId === this.solveCount) {
+                this.transformDiscs();
+                this.printSolution(solution);
+                console.log('Solution is', solution);
+            }
+        } catch (err) {
+            if (solveId === this.solveCount) {
+                console.error('Error solving', err);
+                this.container.querySelector('#solution').innerHTML = 'Error';
+            }
         } finally {
-            this.solving = false;
+            if (solveId === this.solveCount) {
+                this.solving = false;
+            }
         }
     }
 
