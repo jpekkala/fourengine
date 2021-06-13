@@ -1,5 +1,8 @@
 use num_derive::FromPrimitive;
 
+/// The number of bits needed to encode a score
+pub const SCORE_BITS: u32 = 3;
+
 #[derive(FromPrimitive, PartialEq, PartialOrd, Debug, Clone, Copy)]
 pub enum Score {
     Loss = 1,

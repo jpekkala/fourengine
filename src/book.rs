@@ -1,12 +1,13 @@
 use crate::benchmark::{format_large_number, Benchmark};
 use crate::bitboard::{Bitboard, BoardInteger, Position, BOARD_HEIGHT, BOARD_WIDTH};
 use crate::engine::Engine;
-use crate::score::Score;
+use crate::score::{Score, SCORE_BITS};
 use core::mem;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet};
 use std::fs::{create_dir_all, File};
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::{Path, PathBuf};
+use std::cmp::Ordering;
 
 pub const DEFAULT_BOOK_PLY: u32 = 8;
 pub const BOOK_FOLDER: &str = "books";
@@ -15,14 +16,54 @@ pub fn get_path_for_ply(ply: u32) -> PathBuf {
     PathBuf::from(BOOK_FOLDER).join(format!("{}-ply.txt", ply))
 }
 
+/// Packs a position code and its score in one value
+#[derive(PartialEq, Eq)]
+pub struct PackedPositionScore(BoardInteger);
+
+impl PackedPositionScore {
+    // Score is saved in the most significant bits by shifting left
+    const SCORE_SHIFT: u32 = (mem::size_of::<BoardInteger>() * 8) as u32 - SCORE_BITS;
+    const POSITION_MASK: BoardInteger = ((1 as BoardInteger) << Self::SCORE_SHIFT) - 1;
+
+    pub fn new(position: &Position, score: Score) -> Self {
+        let code = position.to_position_code();
+        let score_bits = (score as u64) << Self::SCORE_SHIFT;
+        PackedPositionScore(code | score_bits)
+    }
+
+    pub fn get_position(&self) -> Position {
+        Position::from_position_code(self.get_position_code())
+    }
+
+    pub fn get_position_code(&self) -> BoardInteger {
+        self.0 & Self::POSITION_MASK
+    }
+
+    pub fn get_score(&self) -> Score {
+        Score::from_u64_fast(self.0 >> Self::SCORE_SHIFT)
+    }
+}
+
+impl Ord for PackedPositionScore {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.get_position_code().cmp(&other.get_position_code())
+    }
+}
+
+impl PartialOrd for PackedPositionScore {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 pub struct Book {
-    map: HashMap<Position, Score>,
+    entries: Vec<PackedPositionScore>,
 }
 
 impl Book {
     pub fn empty() -> Book {
         Book {
-            map: HashMap::new(),
+            entries: vec!(),
         }
     }
 
@@ -39,6 +80,7 @@ impl Book {
         for line in data.lines() {
             book.include_line(&line);
         }
+        book.sort_and_shrink();
         book
     }
 
@@ -51,31 +93,47 @@ impl Book {
                 book.include_line(&line);
             }
         }
+        book.sort_and_shrink();
         Ok(book)
     }
 
     fn include_line(&mut self, line: &str) {
         if let Some((position, score)) = parse_hex_line(line).or_else(|| parse_verbose_line(line)) {
             let (position, _symmetric) = position.normalize();
-            self.map.insert(position, score);
+            self.entries.push(PackedPositionScore::new(&position, score));
         } else {
             panic!("Unknown line: {}", line);
         }
     }
 
+    fn sort_and_shrink(&mut self) {
+        self.entries.sort();
+        self.entries.shrink_to_fit();
+    }
+
     pub fn get(&self, position: &Position) -> Score {
-        match self.map.get(position) {
-            Some(score) => *score,
-            None => Score::Unknown,
+        let s = PackedPositionScore::new(position, Score::Unknown);
+        match self.entries.binary_search(&s) {
+            Ok(index) => self.entries[index].get_score(),
+            Err(_) => Score::Unknown,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.map.len()
+        self.entries.len()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.map.is_empty()
+        self.entries.is_empty()
+    }
+}
+
+impl IntoIterator for Book {
+    type Item = PackedPositionScore;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.entries.into_iter()
     }
 }
 
@@ -180,8 +238,9 @@ pub fn generate_book() -> Result<(), std::io::Error> {
     let mut solved = 0;
     let mut book_writer = BookWriter::create_for_ply(DEFAULT_BOOK_PLY)?;
     for (count, pos) in set.into_iter().enumerate() {
-        if let Some(score) = existing_book.map.get(&pos) {
-            book_writer.write_entry(pos, *score)?;
+        let existing_score = existing_book.get(&pos);
+        if existing_score != Score::Unknown {
+            book_writer.write_entry(pos, existing_score)?;
             continue;
         }
 
@@ -211,11 +270,13 @@ pub fn verify_book(reference_book: &Path) -> Result<(), std::io::Error> {
 
     let mut missing_count = 0;
     let mut invalid_count = 0;
-    for (position, reference_score) in reference_book.map.iter() {
-        let score = book.get(position);
+    for p in reference_book.into_iter() {
+        let position = p.get_position();
+        let reference_score = p.get_score();
+        let score = book.get(&position);
         if score == Score::Unknown {
             missing_count += 1;
-        } else if *reference_score != score {
+        } else if reference_score != score {
             invalid_count += 1;
         }
     }

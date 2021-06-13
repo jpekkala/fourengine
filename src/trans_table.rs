@@ -36,9 +36,6 @@ pub struct TransTable {
     work_mask: Entry,
 }
 
-/// The number of bits needed to encode a score
-const SCORE_BITS: u32 = 3;
-
 impl TransTable {
     pub fn new(table_size: usize) -> TransTable {
         let slots: Vec<Slot> = vec![
