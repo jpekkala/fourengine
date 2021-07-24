@@ -21,3 +21,28 @@ wasm-pack build
 npm install
 npm start
 ```
+
+## Profiling
+
+### Setup in WSL2
+```shell
+git clone --depth=1 https://github.com/microsoft/WSL2-Linux-Kernel.git
+cd WSL2-Linux-Kernel/tools/perf
+
+sudo apt install build-essential flex bison libssl-dev libelf-dev
+make
+# add WSL2-Linux-Kernel/tools/perf to $PATH
+```
+If building perf fails, try cloning a tag that matches your kernel version
+```shell
+uname -r
+# 5.10.16.3-microsoft-standard-WSL2
+git clone --depth=1 --branch=linux-msft-wsl-5.10.16.3 https://github.com/microsoft/WSL2-Linux-Kernel.git
+```
+
+### Profile release build
+```shell
+cargo build --release
+perf record target/release/fourengine
+perf report
+```
