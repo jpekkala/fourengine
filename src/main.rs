@@ -3,7 +3,7 @@ use crate::bitboard::Position;
 use crate::book::{Book, DEFAULT_BOOK_PLY, generate_book, get_path_for_ply, verify_book};
 use crate::engine::Engine;
 use crate::score::Score;
-use clap::{App, Arg};
+use clap::{crate_version, App, Arg, ArgMatches};
 use std::cmp::Ordering;
 use std::fs::File;
 use std::io;
@@ -81,91 +81,137 @@ fn parse_line(line: String) -> Option<(String, Score)> {
     Some((variation, score))
 }
 
-fn main() {
-    let matches = App::new("Fourengine")
-        .version("1.0")
-        .about("Connect-4 engine")
-        .author("Jukka Pekkala, Johan Nordlund")
-        .arg(
-            Arg::new("test_file")
-                .long("test")
-                .short('t')
-                .about("Runs a test set from a file")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::new("variation")
-                .long("variation")
-                .short('v')
-                .about("Runs a specific variation")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::new("generate_book")
-                .long("generate-book")
-                .short('g')
-                .about("Generates and saves an opening book"),
-        )
-        .arg(
-            Arg::new("verify_book")
-                .long("verify-book")
-                .about("Compares a generated book against a reference book")
-                .takes_value(true),
-        )
-        .get_matches();
-
-    if let Some(test_file) = matches.value_of("test_file") {
-        run_test_file(test_file).expect("Cannot read file");
-    } else if matches.is_present("generate_book") {
-        match generate_book() {
-            Ok(_) => {}
-            Err(str) => eprintln!("{}", str),
-        }
-    } else if let Some(reference_book) = matches.value_of("verify_book") {
-        match verify_book(Path::new(reference_book)) {
-            Ok(_) => {}
-            Err(str) => eprintln!("{}", str),
-        }
-    } else {
+fn play(matches: &ArgMatches) -> Result<(), String> {
+    let use_book = !matches.is_present("no-book");
+    if use_book {
         let path_buf = get_path_for_ply(DEFAULT_BOOK_PLY);
         let book_exists = path_buf.as_path().exists();
         if !book_exists {
             println!("The book file {} does not exist. You can generate it with --generate-book", path_buf.display());
         }
+    }
 
-        let variation = match matches.value_of("variation") {
-            Some(variation) => String::from(variation),
-            None => {
-                let mut str = String::new();
-                println!("Input variation:");
-                io::stdin()
-                    .read_line(&mut str)
-                    .expect("Failed to read line");
-                str
-            }
-        };
+    let variation = {
+        let mut str = String::new();
+        println!("Input variation:");
+        io::stdin()
+            .read_line(&mut str)
+            .expect("Failed to read line");
+        str
+    };
 
-        let position = Position::from_variation(&variation).unwrap();
-        println!(
-            "The board is ({} moves next)\n{}",
-            if position.get_ply() % 2 == 0 {
-                "white"
-            } else {
-                "red"
-            },
-            position,
-        );
-        println!("Solving...");
+    solve(&variation, use_book)
+}
 
-        let mut engine = Engine::new();
-        if book_exists {
-            let book = Box::new(Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY));
-            engine.set_book(book);
+fn solve(variation: &str, use_book: bool) -> Result<(), String> {
+    let position = Position::from_variation(&variation).unwrap();
+    println!(
+        "The board is ({} moves next)\n{}",
+        if position.get_ply() % 2 == 0 {
+            "white"
+        } else {
+            "red"
+        },
+        position,
+    );
+    if use_book {
+        println!("Solving (book enabled)...");
+    } else {
+        println!("Solving (book disabled)...")
+    }
+
+    let mut engine = Engine::new();
+    if use_book {
+        let book = Box::new(Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY));
+        engine.set_book(book);
+    }
+    match run_variation(&mut engine, &variation) {
+        Ok(benchmark) => {
+            benchmark.print();
+            Ok(())
+        },
+        Err(str) => Err(str),
+    }
+}
+
+fn main() {
+    let matches = App::new("Fourengine")
+        .version(crate_version!())
+        .about("Connect-4 engine")
+        .author("Jukka Pekkala, Johan Nordlund")
+        .arg(
+            Arg::new("no-book")
+                .long("no-book")
+                .about("Disables opening book")
+        )
+        .subcommand(App::new("format-book")
+            .about("Converts a book to another format")
+            .arg(
+                Arg::new("book-file")
+                    .required(true)
+                    .index(1)
+            )
+        )
+        .subcommand(App::new("generate-book")
+            .about("Generates and saves an opening book")
+            .arg(
+                Arg::new("out")
+                    .long("out")
+                    .takes_value(true)
+            )
+        )
+        .subcommand(App::new("solve")
+            .about("Solves a position")
+            .arg(
+                Arg::new("variation")
+                    .required(false)
+                    .index(1)
+            )
+        )
+        .subcommand(App::new("test")
+            .about("Runs a test set from a file")
+            .arg(
+                Arg::new("file")
+                    .required(true)
+                    .index(1)
+            )
+        )
+        .subcommand(App::new("verify-book")
+            .about("Compares and verifies a book against a reference book")
+            .arg(
+                Arg::new("book")
+                    .index(1)
+                    .required(true)
+            )
+            .arg(
+                Arg::new("reference_book")
+                    .index(2)
+                    .required(true)
+            )
+        )
+        .get_matches();
+
+    let result = match matches.subcommand() {
+        Some(("generate-book", sub_matches)) => {
+            generate_book().or_else(|err| Err(err.to_string()))
+        },
+        Some(("solve", sub_matches)) => {
+            let variation = sub_matches.value_of("variation").unwrap_or("");
+            solve(variation, false)
+        },
+        Some(("test", sub_matches)) => {
+            let file = sub_matches.value_of("file").unwrap();
+            run_test_file(file)
+        },
+        Some(("verify-book", sub_matches)) => {
+            let book = Path::new(sub_matches.value_of("book").unwrap());
+            let reference_book = Path::new(sub_matches.value_of("reference_book").unwrap());
+            verify_book(book, reference_book).or_else(|err| Err(err.to_string()))
         }
-        let benchmark = run_variation(&mut engine, &variation);
-        match benchmark {
-            Ok(benchmark) => benchmark.print(),
-            Err(str) => eprintln!("{}", str),
-        }
+        _ => play(&matches)
+    };
+
+    if let Err(str) = result {
+        eprintln!("{}", str);
     }
 }

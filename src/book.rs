@@ -264,8 +264,8 @@ pub fn generate_book() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-pub fn verify_book(reference_book: &Path) -> Result<(), std::io::Error> {
-    let book = Book::open_for_ply(DEFAULT_BOOK_PLY)?;
+pub fn verify_book(book: &Path, reference_book: &Path) -> Result<(), std::io::Error> {
+    let book = Book::open(book)?;
     let reference_book = Book::open(reference_book)?;
 
     let mut missing_count = 0;
