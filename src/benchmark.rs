@@ -6,6 +6,7 @@ pub struct Benchmark {
     pub score: Score,
     pub duration: Duration,
     pub work_count: usize,
+    pub runs: usize,
 }
 
 impl Benchmark {
@@ -20,6 +21,7 @@ impl Benchmark {
             score,
             duration,
             work_count,
+            runs: 1,
         }
     }
 
@@ -28,14 +30,16 @@ impl Benchmark {
             score: Score::Unknown,
             duration: Duration::from_secs(0),
             work_count: 0,
+            runs: 0,
         }
     }
 
-    pub fn add(&self, other: Benchmark) -> Benchmark {
+    pub fn add(&self, other: &Benchmark) -> Benchmark {
         Benchmark {
             score: self.score,
             duration: self.duration + other.duration,
             work_count: self.work_count + other.work_count,
+            runs: self.runs + other.runs,
         }
     }
 
@@ -44,20 +48,22 @@ impl Benchmark {
     }
 
     pub fn print(&self) {
-        let width = 8;
-        println!("The score is {:?}", self.score);
+        let width = 6;
+        if self.runs == 1 {
+            println!("The score is {:?}", self.score);
+        }
         println!(
-            "Work: {}",
-            format_large_number(self.work_count as f64, width)
-        );
-        println!(
-            "Time: {:>width$.3} s",
+            "Total time: {:>width$.3} s",
             self.duration.as_secs_f64(),
             width = width
         );
         println!(
-            "Speed: {}/s",
-            format_large_number(self.get_speed(), width - 1)
+            "Total work: {}",
+            format_large_number(self.work_count as f64, width)
+        );
+        println!(
+            "Speed:      {}/s",
+            format_large_number(self.get_speed(), width)
         );
     }
 }

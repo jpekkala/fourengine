@@ -245,7 +245,7 @@ pub fn generate_book() -> Result<(), std::io::Error> {
         }
 
         let benchmark = book_writer.solve_position(pos)?;
-        total_benchmark = total_benchmark.add(benchmark);
+        total_benchmark = total_benchmark.add(&benchmark);
         solved += 1;
 
         if count % 20 == 0 {

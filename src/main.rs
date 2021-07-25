@@ -24,10 +24,21 @@ fn run_variation(engine: &mut Engine, variation: &str) -> Result<Benchmark, Stri
     Ok(Benchmark::run(engine))
 }
 
-fn run_test_file(filename: &str) -> Result<(), String> {
+fn run_test_files<'a>(filenames: &mut impl Iterator<Item = &'a str>) -> Result<(), String> {
+    let mut total_benchmark = Benchmark::empty();
+    for filename in filenames {
+        let benchmark = verify_and_benchmark_file(filename)?;
+        total_benchmark = total_benchmark.add(&benchmark)
+    }
+    total_benchmark.print();
+    println!("\nAll ok!");
+    Ok(())
+}
+
+fn verify_and_benchmark_file(filename: &str) -> Result<Benchmark, String> {
     let file = File::open(filename).map_err(|e| e.to_string())?;
     let reader = BufReader::new(file);
-    let mut benchmarks = Vec::new();
+    let mut total_benchmark = Benchmark::empty();
     let mut engine = Engine::new();
     for line in reader.lines() {
         if let Some((variation, score)) = parse_line(line.map_err(|e| e.to_string())?) {
@@ -40,31 +51,11 @@ fn run_test_file(filename: &str) -> Result<(), String> {
             engine.work_count = 0;
             let benchmark = run_variation(&mut engine, &variation)?;
             assert_eq!(benchmark.score, score, "Invalid score");
-            benchmarks.push(benchmark);
+            total_benchmark = total_benchmark.add(&benchmark);
         }
     }
 
-    let mut total_work_count = 0;
-    let mut total_elapsed_time = 0.0;
-    for b in &benchmarks {
-        total_work_count += b.work_count;
-        total_elapsed_time += b.duration.as_secs_f64();
-    }
-
-    println!("Total elapsed time: {}", total_elapsed_time);
-    println!(
-        "Average elapsed time: {}",
-        total_elapsed_time / benchmarks.len() as f64
-    );
-    println!(
-        "Average work count: {}",
-        total_work_count / benchmarks.len()
-    );
-    println!(
-        "Nodes per second: {}",
-        total_work_count as f64 / total_elapsed_time
-    );
-    Ok(())
+    Ok(total_benchmark)
 }
 
 fn parse_line(line: String) -> Option<(String, Score)> {
@@ -169,11 +160,12 @@ fn main() {
             )
         )
         .subcommand(App::new("test")
-            .about("Runs a test set from a file")
+            .about("Runs a test set from a file (or several files)")
             .arg(
-                Arg::new("file")
+                Arg::new("files")
                     .required(true)
                     .index(1)
+                    .multiple(true)
             )
         )
         .subcommand(App::new("verify-book")
@@ -192,7 +184,7 @@ fn main() {
         .get_matches();
 
     let result = match matches.subcommand() {
-        Some(("generate-book", sub_matches)) => {
+        Some(("generate-book", _)) => {
             generate_book().or_else(|err| Err(err.to_string()))
         },
         Some(("solve", sub_matches)) => {
@@ -200,8 +192,8 @@ fn main() {
             solve(variation, false)
         },
         Some(("test", sub_matches)) => {
-            let file = sub_matches.value_of("file").unwrap();
-            run_test_file(file)
+            let mut files = sub_matches.values_of("files").unwrap();
+            run_test_files(&mut files)
         },
         Some(("verify-book", sub_matches)) => {
             let book = Path::new(sub_matches.value_of("book").unwrap());
