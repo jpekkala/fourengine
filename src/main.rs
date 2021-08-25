@@ -165,7 +165,7 @@ fn main() {
                 Arg::new("files")
                     .required(true)
                     .index(1)
-                    .multiple(true)
+                    .multiple_values(true)
             )
         )
         .subcommand(App::new("verify-book")
