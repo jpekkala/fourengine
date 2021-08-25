@@ -2,5 +2,4 @@
 .idea
 /pkg
 /books
-Cargo.lock
 perf.data*
