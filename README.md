@@ -1,12 +1,35 @@
 # Fourengine
 A perfect Connect-4 solver
 
-## Run in terminal
+## Quick start
+
+Run in interactive mode:
+
 `cargo run --release`
 
-`cargo run --release -- --variation 444444`
+Solve the game:
 
-`cargo run --release -- --test ./test-set.c4`
+`cargo run --release -- solve`
+
+Solve a position:
+
+`cargo run --release -- solve 444444`
+
+Solve all positions from a file and verify their scores:
+
+`cargo run --release -- test ./test-set.c4`
+
+## Opening book
+This repo does not currently include a precompiled book. It can however be generated with:
+
+`cargo run --release -- generate-book`
+
+In interactive mode, the engine will automatically use an opening book if it exists. The book can be explicitly disabled
+with the flag --no-book:
+
+`cargo run --release -- --no-book`
+
+The _solve_ subcommand never uses a book even if one exists.
 
 ## Webassembly
 
