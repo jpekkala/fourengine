@@ -13,7 +13,7 @@ pub const DEFAULT_BOOK_PLY: u32 = 8;
 pub const BOOK_FOLDER: &str = "books";
 
 pub fn get_path_for_ply(ply: u32) -> PathBuf {
-    PathBuf::from(BOOK_FOLDER).join(format!("{}-ply.txt", ply))
+    PathBuf::from(BOOK_FOLDER).join(format!("{}x{}-ply{}.txt", BOARD_WIDTH, BOARD_HEIGHT, ply))
 }
 
 /// Packs a position code and its score in one value
@@ -226,7 +226,11 @@ pub fn generate_book() -> Result<(), std::io::Error> {
 
     let set = find_positions_to_solve();
     let total_count = set.len();
-    println!("There are {} positions to solve", total_count);
+    println!(
+        "There are {} positions to solve. Saving book as {}",
+        total_count,
+        get_path_for_ply(DEFAULT_BOOK_PLY).display()
+    );
 
     let existing_book = Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY);
     if !existing_book.is_empty() {
