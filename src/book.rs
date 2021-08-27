@@ -138,7 +138,7 @@ impl IntoIterator for Book {
 }
 
 fn format_hex_line(pos: Position, score: Score) -> String {
-    format!("{:0>16X}{}", pos.to_position_code(), score.to_char())
+    format!("{}{}", pos.as_hex_string(), score.to_char())
 }
 
 fn parse_hex_line(line: &str) -> Option<(Position, Score)> {

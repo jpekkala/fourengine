@@ -220,10 +220,26 @@ impl Position {
     pub fn from_variation(variation: &str) -> Option<Position> {
         let mut position = Position::empty();
         for ch in variation.trim().chars() {
-            let column: u32 = ch.to_digit(10)? - 1;
+            let column = Position::char_to_column(ch)?;
             position = position.position_after_drop(column)?;
         }
         Some(position)
+    }
+
+    fn char_to_column(ch: char) -> Option<u32> {
+        let column = if ch.is_ascii_digit() {
+            ch.to_digit(10)? as i32 - 1
+        } else if ch.is_ascii_alphabetic() {
+            ch.to_ascii_uppercase() as i32 - 65
+        } else {
+            -1
+        };
+
+        if column >= 0 && column < BOARD_WIDTH as i32 {
+            Some(column as u32)
+        } else {
+            None
+        }
     }
 
     /// The reverse of to_string
@@ -373,6 +389,11 @@ impl Position {
 
     pub fn as_hex_string(&self) -> String {
         format!("{:0>16X}", self.to_position_code())
+    }
+
+    pub fn from_hex_string(str: &str) -> Option<Position> {
+        let code = BoardInteger::from_str_radix(str, 16).ok()?;
+        Some(Position::from_position_code(code))
     }
 
     pub fn to_normalized_position_code(&self) -> (BoardInteger, bool) {

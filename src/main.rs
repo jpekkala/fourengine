@@ -5,6 +5,7 @@ use crate::engine::Engine;
 use crate::score::Score;
 use clap::{crate_version, App, Arg, ArgMatches};
 use std::cmp::Ordering;
+use std::fmt;
 use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader};
@@ -18,10 +19,32 @@ pub mod heuristic;
 pub mod score;
 pub mod trans_table;
 
-fn run_variation(engine: &mut Engine, variation: &str) -> Result<Benchmark, String> {
-    let position = Position::from_variation(&variation).ok_or("Invalid variation")?;
-    engine.set_position(position);
-    Ok(Benchmark::run(engine))
+/// User input representing a position. The purpose of this is to be able to report errors using
+/// the same string that the user gave. Using Position directly would lose that information.
+enum PositionInput {
+    Variation(String),
+    Hex(String),
+}
+
+impl PositionInput {
+    fn parse(&self) -> Result<Position, String> {
+        match self {
+            Self::Variation(str) => Position::from_variation(str).ok_or(
+                String::from(format!("Invalid variation: {}", str))),
+            Self::Hex(str) => Position::from_hex_string(str).ok_or(
+                String::from(format!("Invalid hex code: {}", str))
+            )
+        }
+    }
+}
+
+impl fmt::Display for PositionInput {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Variation(str) => write!(f, "{}", str),
+            Self::Hex(str) => write!(f, "{}", str)
+        }
+    }
 }
 
 fn run_test_files<'a>(filenames: &mut impl Iterator<Item = &'a str>) -> Result<(), String> {
@@ -41,15 +64,16 @@ fn verify_and_benchmark_file(filename: &str) -> Result<Benchmark, String> {
     let mut total_benchmark = Benchmark::empty();
     let mut engine = Engine::new();
     for line in reader.lines() {
-        if let Some((variation, score)) = parse_line(line.map_err(|e| e.to_string())?) {
+        if let Some((pos_input, score)) = parse_line_with_score(line.map_err(|e| e.to_string())?) {
             println!(
                 "Expecting score {:<4} for variation {}",
                 format!("{:?}", score),
-                variation
+                pos_input
             );
             //engine.reset();
             engine.work_count = 0;
-            let benchmark = run_variation(&mut engine, &variation)?;
+            engine.set_position(pos_input.parse()?);
+            let benchmark = Benchmark::run(&mut engine);
             assert_eq!(benchmark.score, score, "Invalid score");
             total_benchmark = total_benchmark.add(&benchmark);
         }
@@ -58,7 +82,7 @@ fn verify_and_benchmark_file(filename: &str) -> Result<Benchmark, String> {
     Ok(total_benchmark)
 }
 
-fn parse_line(line: String) -> Option<(String, Score)> {
+fn parse_line_with_score(line: String) -> Option<(PositionInput, Score)> {
     let mut iter = line.split_whitespace();
     let variation = String::from(iter.next()?);
     let score_value = iter.next()?.parse::<i32>().unwrap();
@@ -68,8 +92,8 @@ fn parse_line(line: String) -> Option<(String, Score)> {
         Ordering::Equal => Score::Draw,
         Ordering::Greater => Score::Win,
     };
-
-    Some((variation, score))
+    
+    Some((PositionInput::Variation(variation), score))
 }
 
 fn play(matches: &ArgMatches) -> Result<(), String> {
@@ -91,20 +115,25 @@ fn play(matches: &ArgMatches) -> Result<(), String> {
         str
     };
 
-    solve(&variation, use_book)
+    let position_input = PositionInput::Variation(variation);
+    solve(position_input, use_book)
 }
 
-fn solve(variation: &str, use_book: bool) -> Result<(), String> {
-    let position = Position::from_variation(&variation).unwrap();
+fn print_board(position: Position) {
     println!(
-        "The board is ({} moves next)\n{}",
-        if position.get_ply() % 2 == 0 {
-            "white"
-        } else {
-            "red"
-        },
+        "The board is:\n{}\nPlayer {} moves next",
         position,
+        if position.get_ply() % 2 == 0 {
+            "X"
+        } else {
+            "O"
+        }
     );
+}
+
+fn solve(pos_input: PositionInput, use_book: bool) -> Result<(), String> {
+    let position = pos_input.parse()?;
+    print_board(position);
     if use_book {
         println!("Solving (book enabled)...");
     } else {
@@ -116,13 +145,11 @@ fn solve(variation: &str, use_book: bool) -> Result<(), String> {
         let book = Box::new(Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY));
         engine.set_book(book);
     }
-    match run_variation(&mut engine, &variation) {
-        Ok(benchmark) => {
-            benchmark.print();
-            Ok(())
-        },
-        Err(str) => Err(str),
-    }
+    engine.set_position(position);
+    let benchmark = Benchmark::run(&mut engine);
+    println!();
+    benchmark.print();
+    Ok(())
 }
 
 fn main() {
@@ -151,12 +178,31 @@ fn main() {
                     .takes_value(true)
             )
         )
+        .subcommand(App::new("print")
+            .about("Prints a position as ASCII text")
+            .alias("draw")
+            .arg(
+                Arg::new("variation")
+                    .required(false)
+                    .index(1)
+            )
+            .arg(
+                Arg::new("hex")
+                    .long("hex")
+                    .about("Interpret the variation as a hexadecimal 64-bit position code")
+            )
+        )
         .subcommand(App::new("solve")
             .about("Solves a position")
             .arg(
                 Arg::new("variation")
                     .required(false)
                     .index(1)
+            )
+            .arg(
+                Arg::new("hex")
+                    .long("hex")
+                    .about("Interpret the variation as a hexadecimal 64-bit position code")
             )
         )
         .subcommand(App::new("test")
@@ -187,9 +233,29 @@ fn main() {
         Some(("generate-book", _)) => {
             generate_book().or_else(|err| Err(err.to_string()))
         },
+        Some(("print", sub_matches)) => {
+            let variation = sub_matches.value_of("variation").unwrap_or("");
+            let pos_input = if sub_matches.is_present("hex") {
+                PositionInput::Hex(String::from(variation))
+            } else {
+                PositionInput::Variation(String::from(variation))
+            };
+            match pos_input.parse() {
+                Ok(pos) => {
+                    print_board(pos);
+                    Ok(())
+                },
+                Err(str) => Err(str),
+            }
+        },
         Some(("solve", sub_matches)) => {
             let variation = sub_matches.value_of("variation").unwrap_or("");
-            solve(variation, false)
+            let pos_input = if sub_matches.is_present("hex") {
+                PositionInput::Hex(String::from(variation))
+            } else {
+                PositionInput::Variation(String::from(variation))
+            };
+            solve(pos_input, false)
         },
         Some(("test", sub_matches)) => {
             let mut files = sub_matches.values_of("files").unwrap();
