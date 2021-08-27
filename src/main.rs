@@ -29,8 +29,13 @@ enum PositionInput {
 impl PositionInput {
     fn parse(&self) -> Result<Position, String> {
         match self {
-            Self::Variation(str) => Position::from_variation(str).ok_or(
-                String::from(format!("Invalid variation: {}", str))),
+            Self::Variation(str) => Position::from_variation(str)
+                // Automatically try hex for convenience. In the standard board size, hex codes
+                // always start with leading zeroes which cannot happen in variations. There might
+                // be strings in other board sizes that are valid in both formats but for those
+                // situations the user can explicitly use --hex
+                .or_else(|| Position::from_hex_string(str))
+                .ok_or(String::from(format!("Invalid variation: {}", str))),
             Self::Hex(str) => Position::from_hex_string(str).ok_or(
                 String::from(format!("Invalid hex code: {}", str))
             )

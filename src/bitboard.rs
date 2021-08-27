@@ -5,6 +5,7 @@ use crate::score::Score;
 use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::Formatter;
+use std::mem;
 
 /// board dimensions
 pub const BOARD_WIDTH: u32 = 7;
@@ -392,8 +393,12 @@ impl Position {
     }
 
     pub fn from_hex_string(str: &str) -> Option<Position> {
-        let code = BoardInteger::from_str_radix(str, 16).ok()?;
-        Some(Position::from_position_code(code))
+        if str.trim().len() ==  2 * mem::size_of::<BoardInteger>() {
+            let code = BoardInteger::from_str_radix(str, 16).ok()?;
+            Some(Position::from_position_code(code))
+        } else {
+            None
+        }
     }
 
     pub fn to_normalized_position_code(&self) -> (BoardInteger, bool) {
