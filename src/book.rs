@@ -3,11 +3,11 @@ use crate::bitboard::{Bitboard, BoardInteger, Position, BOARD_HEIGHT, BOARD_WIDT
 use crate::engine::Engine;
 use crate::score::{Score, SCORE_BITS};
 use core::mem;
-use std::collections::{BTreeSet};
+use std::cmp::Ordering;
+use std::collections::BTreeSet;
 use std::fs::{create_dir_all, File};
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::{Path, PathBuf};
-use std::cmp::Ordering;
 
 pub const DEFAULT_BOOK_PLY: u32 = 8;
 pub const BOOK_FOLDER: &str = "books";
@@ -23,7 +23,7 @@ pub struct PackedPositionScore(BoardInteger);
 impl PackedPositionScore {
     // Score is saved in the most significant bits by shifting left
     const SCORE_SHIFT: u32 = (mem::size_of::<BoardInteger>() * 8) as u32 - SCORE_BITS;
-    const POSITION_MASK: BoardInteger = ((1 as BoardInteger) << Self::SCORE_SHIFT) - 1;
+    const POSITION_MASK: BoardInteger = (1 << Self::SCORE_SHIFT) - 1;
 
     pub fn new(position: &Position, score: Score) -> Self {
         let code = position.to_position_code();
@@ -62,9 +62,7 @@ pub struct Book {
 
 impl Book {
     pub fn empty() -> Book {
-        Book {
-            entries: vec!(),
-        }
+        Book { entries: vec![] }
     }
 
     pub fn open_for_ply(ply: u32) -> Result<Book, std::io::Error> {
@@ -72,13 +70,13 @@ impl Book {
     }
 
     pub fn open_for_ply_or_empty(ply: u32) -> Book {
-        Book::open(&get_path_for_ply(ply)).unwrap_or(Book::empty())
+        Book::open(&get_path_for_ply(ply)).unwrap_or_else(|_| Book::empty())
     }
 
     pub fn from_lines(data: &str) -> Book {
         let mut book = Book::empty();
         for line in data.lines() {
-            book.include_line(&line);
+            book.include_line(line);
         }
         book.sort_and_shrink();
         book
@@ -100,7 +98,8 @@ impl Book {
     fn include_line(&mut self, line: &str) {
         if let Some((position, score)) = parse_hex_line(line).or_else(|| parse_verbose_line(line)) {
             let (position, _symmetric) = position.normalize();
-            self.entries.push(PackedPositionScore::new(&position, score));
+            self.entries
+                .push(PackedPositionScore::new(&position, score));
         } else {
             panic!("Unknown line: {}", line);
         }

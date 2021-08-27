@@ -12,7 +12,7 @@ pub struct Engine {
     pub work_count: usize,
     pub heuristic: FixedHeuristic,
     ply: u32,
-    book: Option<Box<Book>>
+    book: Option<Box<Book>>,
 }
 
 #[derive(Clone, Copy)]
@@ -70,7 +70,7 @@ impl Engine {
             work_count: 0,
             heuristic: FixedHeuristic {},
             ply: 0,
-            book: None
+            book: None,
         }
     }
 

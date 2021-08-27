@@ -393,7 +393,7 @@ impl Position {
     }
 
     pub fn from_hex_string(str: &str) -> Option<Position> {
-        if str.trim().len() ==  2 * mem::size_of::<BoardInteger>() {
+        if str.trim().len() == 2 * mem::size_of::<BoardInteger>() {
             let code = BoardInteger::from_str_radix(str, 16).ok()?;
             Some(Position::from_position_code(code))
         } else {
@@ -473,7 +473,7 @@ impl Position {
         }
 
         let mut variation = String::new();
-        if recurse(&self, &mut variation) {
+        if recurse(self, &mut variation) {
             Some(variation)
         } else {
             None

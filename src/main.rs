@@ -1,6 +1,6 @@
 use crate::benchmark::Benchmark;
 use crate::bitboard::Position;
-use crate::book::{Book, DEFAULT_BOOK_PLY, generate_book, get_path_for_ply, verify_book};
+use crate::book::{generate_book, get_path_for_ply, verify_book, Book, DEFAULT_BOOK_PLY};
 use crate::engine::Engine;
 use crate::score::Score;
 use clap::{crate_version, App, Arg, ArgMatches};
@@ -35,10 +35,10 @@ impl PositionInput {
                 // be strings in other board sizes that are valid in both formats but for those
                 // situations the user can explicitly use --hex
                 .or_else(|| Position::from_hex_string(str))
-                .ok_or(String::from(format!("Invalid variation: {}", str))),
-            Self::Hex(str) => Position::from_hex_string(str).ok_or(
-                String::from(format!("Invalid hex code: {}", str))
-            )
+                .ok_or(format!("Invalid variation: {}", str)),
+            Self::Hex(str) => {
+                Position::from_hex_string(str).ok_or(format!("Invalid hex code: {}", str))
+            }
         }
     }
 }
@@ -47,7 +47,7 @@ impl fmt::Display for PositionInput {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Variation(str) => write!(f, "{}", str),
-            Self::Hex(str) => write!(f, "{}", str)
+            Self::Hex(str) => write!(f, "{}", str),
         }
     }
 }
@@ -97,7 +97,7 @@ fn parse_line_with_score(line: String) -> Option<(PositionInput, Score)> {
         Ordering::Equal => Score::Draw,
         Ordering::Greater => Score::Win,
     };
-    
+
     Some((PositionInput::Variation(variation), score))
 }
 
@@ -107,7 +107,10 @@ fn play(matches: &ArgMatches) -> Result<(), String> {
         let path_buf = get_path_for_ply(DEFAULT_BOOK_PLY);
         let book_exists = path_buf.as_path().exists();
         if !book_exists {
-            println!("The book file {} does not exist. You can generate it with --generate-book", path_buf.display());
+            println!(
+                "The book file {} does not exist. You can generate it with --generate-book",
+                path_buf.display()
+            );
         }
     }
 
@@ -165,79 +168,59 @@ fn main() {
         .arg(
             Arg::new("no-book")
                 .long("no-book")
-                .about("Disables opening book")
+                .about("Disables opening book"),
         )
-        .subcommand(App::new("format-book")
-            .about("Converts a book to another format")
-            .arg(
-                Arg::new("book-file")
-                    .required(true)
-                    .index(1)
-            )
+        .subcommand(
+            App::new("format-book")
+                .about("Converts a book to another format")
+                .arg(Arg::new("book-file").required(true).index(1)),
         )
-        .subcommand(App::new("generate-book")
-            .about("Generates and saves an opening book")
-            .arg(
-                Arg::new("out")
-                    .long("out")
-                    .takes_value(true)
-            )
+        .subcommand(
+            App::new("generate-book")
+                .about("Generates and saves an opening book")
+                .arg(Arg::new("out").long("out").takes_value(true)),
         )
-        .subcommand(App::new("print")
-            .about("Prints a position as ASCII text")
-            .alias("draw")
-            .arg(
-                Arg::new("variation")
-                    .required(false)
-                    .index(1)
-            )
-            .arg(
-                Arg::new("hex")
-                    .long("hex")
-                    .about("Interpret the variation as a hexadecimal 64-bit position code")
-            )
+        .subcommand(
+            App::new("print")
+                .about("Prints a position as ASCII text")
+                .alias("draw")
+                .arg(Arg::new("variation").required(false).index(1))
+                .arg(
+                    Arg::new("hex")
+                        .long("hex")
+                        .about("Interpret the variation as a hexadecimal 64-bit position code"),
+                ),
         )
-        .subcommand(App::new("solve")
-            .about("Solves a position")
-            .arg(
-                Arg::new("variation")
-                    .required(false)
-                    .index(1)
-            )
-            .arg(
-                Arg::new("hex")
-                    .long("hex")
-                    .about("Interpret the variation as a hexadecimal 64-bit position code")
-            )
+        .subcommand(
+            App::new("solve")
+                .about("Solves a position")
+                .arg(Arg::new("variation").required(false).index(1))
+                .arg(
+                    Arg::new("hex")
+                        .long("hex")
+                        .about("Interpret the variation as a hexadecimal 64-bit position code"),
+                ),
         )
-        .subcommand(App::new("test")
-            .about("Runs a test set from a file (or several files)")
-            .arg(
-                Arg::new("files")
-                    .required(true)
-                    .index(1)
-                    .multiple_values(true)
-            )
+        .subcommand(
+            App::new("test")
+                .about("Runs a test set from a file (or several files)")
+                .arg(
+                    Arg::new("files")
+                        .required(true)
+                        .index(1)
+                        .multiple_values(true),
+                ),
         )
-        .subcommand(App::new("verify-book")
-            .about("Compares and verifies a book against a reference book")
-            .arg(
-                Arg::new("book")
-                    .index(1)
-                    .required(true)
-            )
-            .arg(
-                Arg::new("reference_book")
-                    .index(2)
-                    .required(true)
-            )
+        .subcommand(
+            App::new("verify-book")
+                .about("Compares and verifies a book against a reference book")
+                .arg(Arg::new("book").index(1).required(true))
+                .arg(Arg::new("reference_book").index(2).required(true)),
         )
         .get_matches();
 
     let result = match matches.subcommand() {
-        Some(("generate-book", _)) => {
-            generate_book().or_else(|err| Err(err.to_string()))
-        },
+        Some(("generate-book", _)) => generate_book().map_err(|err| err.to_string()),
         Some(("print", sub_matches)) => {
             let variation = sub_matches.value_of("variation").unwrap_or("");
             let pos_input = if sub_matches.is_present("hex") {
@@ -249,10 +232,10 @@ fn main() {
                 Ok(pos) => {
                     print_board(pos);
                     Ok(())
-                },
+                }
                 Err(str) => Err(str),
             }
-        },
+        }
         Some(("solve", sub_matches)) => {
             let variation = sub_matches.value_of("variation").unwrap_or("");
             let pos_input = if sub_matches.is_present("hex") {
@@ -261,17 +244,17 @@ fn main() {
                 PositionInput::Variation(String::from(variation))
             };
             solve(pos_input, false)
-        },
+        }
         Some(("test", sub_matches)) => {
             let mut files = sub_matches.values_of("files").unwrap();
             run_test_files(&mut files)
-        },
+        }
         Some(("verify-book", sub_matches)) => {
             let book = Path::new(sub_matches.value_of("book").unwrap());
             let reference_book = Path::new(sub_matches.value_of("reference_book").unwrap());
-            verify_book(book, reference_book).or_else(|err| Err(err.to_string()))
+            verify_book(book, reference_book).map_err(|err| err.to_string())
         }
-        _ => play(&matches)
+        _ => play(&matches),
     };
 
     if let Err(str) = result {
