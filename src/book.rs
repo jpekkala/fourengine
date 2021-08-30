@@ -308,16 +308,22 @@ fn find_positions_to_solve() -> BTreeSet<Position> {
     set
 }
 
+/// Explores the game tree up to a certain depth and calls the function for each leaf node. This
+/// function skips leaf nodes that already contain a win/loss.
 pub fn explore_tree<F>(position: Position, max_depth: u32, f: &mut F)
 where
     F: FnMut(Position),
 {
+    if position.has_anyone_won() {
+        return;
+    }
+
     if max_depth == 0 {
         f(position);
         return;
     }
 
-    let mut move_bitmap = position.get_nonlosing_moves();
+    let mut move_bitmap = position.get_unblocked_moves();
     let (_position_code, symmetric) = position.to_normalized_position_code();
     if symmetric {
         move_bitmap = move_bitmap.get_left_half();

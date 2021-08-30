@@ -107,8 +107,8 @@ impl Engine {
 
     #[inline(always)]
     fn quick_evaluate(&self, position: &Position, ab: &AlphaBeta) -> QuickEvaluation {
-        let nonlosing_moves = position.get_nonlosing_moves();
-        if nonlosing_moves.0 == 0 {
+        let unblocked_moves = position.get_unblocked_moves();
+        if unblocked_moves.0 == 0 {
             return QuickEvaluation::Score(Score::Loss);
         }
 
@@ -118,18 +118,18 @@ impl Engine {
         if forced_move_count > 1 {
             return QuickEvaluation::Score(Score::Loss);
         } else if forced_move_count == 1 {
-            if immediate_enemy_threats.0 & nonlosing_moves.0 == 0 {
+            if immediate_enemy_threats.0 & unblocked_moves.0 == 0 {
                 return QuickEvaluation::Score(Score::Loss);
             }
             return QuickEvaluation::Moves(immediate_enemy_threats);
         }
 
-        let auto_score = position.autofinish_score(nonlosing_moves);
+        let auto_score = position.autofinish_score(unblocked_moves);
         if auto_score != Score::Unknown && auto_score <= ab.alpha {
             return QuickEvaluation::Score(auto_score);
         }
 
-        QuickEvaluation::Moves(nonlosing_moves)
+        QuickEvaluation::Moves(unblocked_moves)
     }
 
     #[cfg(debug_assertions)]
@@ -148,7 +148,7 @@ impl Engine {
     #[cfg(debug_assertions)]
     fn check_negamax_preconditions(&self) {
         self.require_precondition(
-            !self.position.has_won(),
+            !self.position.has_anyone_won(),
             "Position should not have any wins",
         );
         self.require_precondition(

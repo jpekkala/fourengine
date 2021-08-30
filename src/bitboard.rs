@@ -309,7 +309,7 @@ impl Position {
         })
     }
 
-    pub fn has_won(&self) -> bool {
+    pub fn has_anyone_won(&self) -> bool {
         self.current.has_won() || self.other.has_won()
     }
 
@@ -414,8 +414,12 @@ impl Position {
         }
     }
 
-    /// Returns all moves where the opponent does not have a threat directly above.
-    pub fn get_nonlosing_moves(&self) -> MoveBitmap {
+    /// Returns all moves where the opponent does not have a threat directly above. Unblocked moves
+    /// are a subset of legal moves.
+    ///
+    /// Note that this function does not check for forced moves so it is possible that a move
+    /// returned here still leads to an immediate loss, just not in the same column.
+    pub fn get_unblocked_moves(&self) -> MoveBitmap {
         let legal_moves = self.get_height_cells() & FULL_BOARD;
         let enemy_threats = self.to_other_perspective().get_threats();
         MoveBitmap(!(enemy_threats.0 >> 1) & legal_moves)
