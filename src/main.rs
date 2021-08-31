@@ -1,6 +1,6 @@
 use crate::benchmark::Benchmark;
 use crate::bitboard::Position;
-use crate::book::{generate_book, get_path_for_ply, verify_book, Book, DEFAULT_BOOK_PLY};
+use crate::book::{generate_book, get_path_for_ply, verify_book, Book, BookFormat, BookWriter, DEFAULT_BOOK_PLY};
 use crate::engine::Engine;
 use crate::score::Score;
 use clap::{crate_version, App, Arg, ArgMatches};
@@ -8,7 +8,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::fs::File;
 use std::io;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
 
 pub mod benchmark;
@@ -101,6 +101,34 @@ fn parse_line_with_score(line: String) -> Option<(PositionInput, Score)> {
     Some((PositionInput::Variation(variation), score))
 }
 
+pub fn format_book(matches: &ArgMatches) -> Result<(), std::io::Error> {
+    let book_file = Path::new(matches.value_of("book-file").unwrap());
+    let book = Book::open(book_file)?;
+
+    let book_format = match matches.value_of("format").unwrap() {
+        "binary" => BookFormat::Binary,
+        "hex" => BookFormat::Hex,
+        &_ => panic!("Invalid format")
+    };
+
+    let writer: Box<dyn Write> = match matches.value_of("out") {
+        None => Box::new(io::stdout()),
+        Some(path) => {
+            let path = Path::new(path);
+            let writer = LineWriter::new(File::create(path)?);
+            Box::new(writer)
+        }
+    };
+
+    let mut book_writer = BookWriter::create(writer, book_format);
+
+    for entry in book.iter() {
+        let entry = entry;
+        book_writer.write_entry(entry)?;
+    }
+    Ok(())
+}
+
 fn play(matches: &ArgMatches) -> Result<(), String> {
     let use_book = !matches.is_present("no-book");
     if use_book {
@@ -173,7 +201,18 @@ fn main() {
         .subcommand(
             App::new("format-book")
                 .about("Converts a book to another format")
-                .arg(Arg::new("book-file").required(true).index(1)),
+                .arg(Arg::new("book-file").required(true).index(1))
+                .arg(Arg::new("out")
+                         .long("out")
+                    .takes_value(true)
+                )
+                .arg(
+                    Arg::new("format")
+                        .long("format")
+                        .possible_value("hex")
+                        .possible_value("binary")
+                        .default_value("hex"),
+                ),
         )
         .subcommand(
             App::new("generate-book")
@@ -220,6 +259,7 @@ fn main() {
         .get_matches();
 
     let result = match matches.subcommand() {
+        Some(("format-book", sub_matches)) => format_book(sub_matches).map_err(|err| err.to_string()),
         Some(("generate-book", _)) => generate_book().map_err(|err| err.to_string()),
         Some(("print", sub_matches)) => {
             let variation = sub_matches.value_of("variation").unwrap_or("");

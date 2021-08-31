@@ -203,22 +203,22 @@ impl Book {
     }
 }
 
-enum BookFormat {
+pub enum BookFormat {
     Hex,
     Binary,
 }
 
-struct BookWriter<W: Write> {
+pub struct BookWriter<W: Write> {
     format: BookFormat,
     writer: W,
 }
 
 impl<W: Write> BookWriter<W> {
-    fn create(writer: W, format: BookFormat) -> BookWriter<W> {
+    pub fn create(writer: W, format: BookFormat) -> BookWriter<W> {
         BookWriter { format, writer }
     }
 
-    fn write_entry(&mut self, entry: &BookEntry) -> io::Result<()> {
+    pub fn write_entry(&mut self, entry: &BookEntry) -> io::Result<()> {
         match &self.format {
             BookFormat::Hex => {
                 let line = entry.as_hex_string();
@@ -228,18 +228,6 @@ impl<W: Write> BookWriter<W> {
             BookFormat::Binary => self.writer.write_all(&entry.0.to_be_bytes()),
         }
     }
-}
-
-pub fn format_book(book_path: &Path) -> Result<(), std::io::Error> {
-    let book = Book::open(book_path)?;
-
-    let stdout = io::stdout();
-    let mut book_writer = BookWriter::create(stdout, BookFormat::Hex);
-
-    for entry in book.iter() {
-        book_writer.write_entry(entry)?;
-    }
-    Ok(())
 }
 
 pub fn generate_book() -> Result<(), std::io::Error> {
