@@ -216,8 +216,7 @@ impl Engine {
         if self.ply == 8 {
             // TODO: This check slows down the engine a bit too much when the book is disabled
             if let Some(book) = &self.book {
-                let (position, _) = self.position.normalize();
-                let book_score = book.get(&position);
+                let book_score = book.get(&self.position);
                 if book_score != Score::Unknown {
                     return book_score;
                 }

@@ -345,15 +345,14 @@ impl Position {
         }
     }
 
-    pub fn normalize(&self) -> (Position, bool) {
+    pub fn normalize(&self) -> Position {
         let flipped = self.flip();
         let code1 = self.to_position_code();
         let code2 = flipped.to_position_code();
-        let symmetric = code1 == code2;
         if code1 < code2 {
-            (flipped, symmetric)
+            flipped
         } else {
-            (*self, symmetric)
+            *self
         }
     }
 

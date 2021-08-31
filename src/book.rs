@@ -3,12 +3,12 @@ use crate::bitboard::{Bitboard, BoardInteger, Position, BOARD_HEIGHT, BOARD_WIDT
 use crate::engine::Engine;
 use crate::score::{Score, SCORE_BITS};
 use core::mem;
-use std::cmp;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashSet};
 use std::fs::{create_dir_all, File};
-use std::io::{BufRead, BufReader, LineWriter, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
+use std::{cmp, io};
 
 pub const DEFAULT_BOOK_PLY: u32 = 8;
 pub const BOOK_FOLDER: &str = "books";
@@ -19,17 +19,17 @@ pub fn get_path_for_ply(ply: u32) -> PathBuf {
 
 /// Packs a position code and its score in one value
 #[derive(PartialEq, Eq)]
-pub struct PackedPositionScore(BoardInteger);
+pub struct BookEntry(BoardInteger);
 
-impl PackedPositionScore {
+impl BookEntry {
     // Score is saved in the most significant bits by shifting left
     const SCORE_SHIFT: u32 = (mem::size_of::<BoardInteger>() * 8) as u32 - SCORE_BITS;
     const POSITION_MASK: BoardInteger = (1 << Self::SCORE_SHIFT) - 1;
 
     pub fn new(position: &Position, score: Score) -> Self {
-        let code = position.to_position_code();
+        let code = position.normalize().to_position_code();
         let score_bits = (score as u64) << Self::SCORE_SHIFT;
-        PackedPositionScore(code | score_bits)
+        BookEntry(code | score_bits)
     }
 
     pub fn get_position(&self) -> Position {
@@ -43,22 +43,83 @@ impl PackedPositionScore {
     pub fn get_score(&self) -> Score {
         Score::from_u64_fast(self.0 >> Self::SCORE_SHIFT)
     }
+
+    fn as_hex_string(&self) -> String {
+        format!(
+            "{}{}",
+            self.get_position().as_hex_string(),
+            self.get_score().to_char()
+        )
+    }
+
+    fn from_hex_string(line: &str) -> Option<BookEntry> {
+        const HEX_LENGTH: usize = mem::size_of::<BoardInteger>() * 2;
+        if line.len() != HEX_LENGTH + 1 {
+            return None;
+        }
+
+        let position_str = &line[0..HEX_LENGTH];
+        let position_code = BoardInteger::from_str_radix(position_str, 16).ok()?;
+        let position = Position::from_position_code(position_code);
+
+        let score = Score::from_string(&line[HEX_LENGTH..]);
+        if score == Score::Unknown {
+            None
+        } else {
+            Some(BookEntry::new(&position, score))
+        }
+    }
+
+    fn from_verbose_string(line: &str) -> Option<BookEntry> {
+        const CELL_COUNT: usize = (BOARD_WIDTH * BOARD_HEIGHT) as usize;
+        let line: String = line.chars().filter(|x| *x != ',').collect();
+        if line.len() < CELL_COUNT + 1 {
+            return None;
+        }
+        let position_str = &line[0..CELL_COUNT];
+        let score_str = &line[CELL_COUNT..];
+
+        let mut current = Bitboard::empty();
+        let mut other = Bitboard::empty();
+        for (i, ch) in position_str.chars().enumerate() {
+            let y = i as u32 % BOARD_HEIGHT;
+            let x = i as u32 / BOARD_HEIGHT;
+            match ch {
+                'X' | 'x' => current = current.set_disc(x, y),
+                'O' | 'o' => other = other.set_disc(x, y),
+                ' ' | 'b' => {}
+                _ => return None,
+            }
+        }
+
+        let position = Position::new(current, other);
+        let score = Score::from_string(score_str);
+        if score == Score::Unknown {
+            None
+        } else {
+            Some(BookEntry::new(&position, score))
+        }
+    }
+
+    fn autodetect_parse(line: &str) -> Option<BookEntry> {
+        Self::from_hex_string(line).or_else(|| Self::from_verbose_string(line))
+    }
 }
 
-impl Ord for PackedPositionScore {
+impl Ord for BookEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         self.get_position_code().cmp(&other.get_position_code())
     }
 }
 
-impl PartialOrd for PackedPositionScore {
+impl PartialOrd for BookEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 pub struct Book {
-    entries: Vec<PackedPositionScore>,
+    entries: Vec<BookEntry>,
 }
 
 impl Book {
@@ -97,10 +158,8 @@ impl Book {
     }
 
     fn include_line(&mut self, line: &str) {
-        if let Some((position, score)) = parse_hex_line(line).or_else(|| parse_verbose_line(line)) {
-            let (position, _symmetric) = position.normalize();
-            self.entries
-                .push(PackedPositionScore::new(&position, score));
+        if let Some(book_entry) = BookEntry::autodetect_parse(line) {
+            self.entries.push(book_entry);
         } else {
             panic!("Unknown line: {}", line);
         }
@@ -112,8 +171,8 @@ impl Book {
     }
 
     pub fn get(&self, position: &Position) -> Score {
-        let s = PackedPositionScore::new(position, Score::Unknown);
-        match self.entries.binary_search(&s) {
+        let entry = BookEntry::new(position, Score::Unknown);
+        match self.entries.binary_search(&entry) {
             Ok(index) => self.entries[index].get_score(),
             Err(_) => Score::Unknown,
         }
@@ -127,15 +186,15 @@ impl Book {
         self.entries.is_empty()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &PackedPositionScore> {
+    pub fn iter(&self) -> impl Iterator<Item = &BookEntry> {
         self.entries.iter()
     }
 
     pub fn to_position_set(&self) -> HashSet<Position> {
         let mut set = HashSet::new();
-        for pos_score in self.iter() {
-            let position = pos_score.get_position();
-            let score = pos_score.get_score();
+        for book_entry in self.iter() {
+            let position = book_entry.get_position();
+            let score = book_entry.get_score();
             if score != Score::Unknown {
                 set.insert(position);
             }
@@ -144,100 +203,55 @@ impl Book {
     }
 }
 
-fn format_hex_line(pos: Position, score: Score) -> String {
-    format!("{}{}", pos.as_hex_string(), score.to_char())
+enum BookFormat {
+    Hex,
+    Binary,
 }
 
-fn parse_hex_line(line: &str) -> Option<(Position, Score)> {
-    const HEX_LENGTH: usize = mem::size_of::<BoardInteger>() * 2;
-    if line.len() != HEX_LENGTH + 1 {
-        return None;
-    }
-
-    let position_str = &line[0..HEX_LENGTH];
-    let position_code = BoardInteger::from_str_radix(position_str, 16).ok()?;
-    let position = Position::from_position_code(position_code);
-
-    let score = Score::from_string(&line[HEX_LENGTH..]);
-    if score == Score::Unknown {
-        None
-    } else {
-        Some((position, score))
-    }
+struct BookWriter<W: Write> {
+    format: BookFormat,
+    writer: W,
 }
 
-fn parse_verbose_line(line: &str) -> Option<(Position, Score)> {
-    const CELL_COUNT: usize = (BOARD_WIDTH * BOARD_HEIGHT) as usize;
-    let line: String = line.chars().filter(|x| *x != ',').collect();
-    if line.len() < CELL_COUNT + 1 {
-        return None;
+impl<W: Write> BookWriter<W> {
+    fn create(writer: W, format: BookFormat) -> BookWriter<W> {
+        BookWriter { format, writer }
     }
-    let position_str = &line[0..CELL_COUNT];
-    let score_str = &line[CELL_COUNT..];
 
-    let mut current = Bitboard::empty();
-    let mut other = Bitboard::empty();
-    for (i, ch) in position_str.chars().enumerate() {
-        let y = i as u32 % BOARD_HEIGHT;
-        let x = i as u32 / BOARD_HEIGHT;
-        match ch {
-            'X' | 'x' => current = current.set_disc(x, y),
-            'O' | 'o' => other = other.set_disc(x, y),
-            ' ' | 'b' => {}
-            _ => return None,
+    fn write_entry(&mut self, entry: &BookEntry) -> io::Result<()> {
+        match &self.format {
+            BookFormat::Hex => {
+                let line = entry.as_hex_string();
+                self.writer.write_all(line.as_bytes())?;
+                self.writer.write_all(b"\n")
+            }
+            BookFormat::Binary => self.writer.write_all(&entry.0.to_be_bytes()),
         }
     }
-
-    let position = Position::new(current, other);
-    let score = Score::from_string(score_str);
-    if score == Score::Unknown {
-        None
-    } else {
-        Some((position, score))
-    }
 }
 
-struct BookWriter {
-    file: LineWriter<File>,
-    engine: Engine,
-}
+pub fn format_book(book_path: &Path) -> Result<(), std::io::Error> {
+    let book = Book::open(book_path)?;
 
-impl BookWriter {
-    fn create_for_ply(ply: u32) -> Result<BookWriter, std::io::Error> {
-        BookWriter::create(&get_path_for_ply(ply))
-    }
+    let stdout = io::stdout();
+    let mut book_writer = BookWriter::create(stdout, BookFormat::Hex);
 
-    fn create(file_path: &Path) -> Result<BookWriter, std::io::Error> {
-        let file = File::create(file_path)?;
-        Ok(BookWriter {
-            file: LineWriter::new(file),
-            engine: Engine::new(),
-        })
+    for entry in book.iter() {
+        book_writer.write_entry(entry)?;
     }
-
-    fn solve_position(&mut self, pos: Position) -> Result<Benchmark, std::io::Error> {
-        self.engine.set_position(pos);
-        let benchmark = Benchmark::run(&mut self.engine);
-        self.write_entry(pos, benchmark.score)?;
-        Ok(benchmark)
-    }
-
-    fn write_entry(&mut self, pos: Position, score: Score) -> Result<(), std::io::Error> {
-        let line = format_hex_line(pos, score);
-        self.file.write_all(line.as_bytes())?;
-        self.file.write_all(b"\n")
-    }
+    Ok(())
 }
 
 pub fn generate_book() -> Result<(), std::io::Error> {
     create_dir_all(BOOK_FOLDER)?;
+    let book_path = get_path_for_ply(DEFAULT_BOOK_PLY);
 
     let set = find_positions_to_solve();
     let total_count = set.len();
     println!(
         "There are {} positions to solve. Saving book as {}",
         total_count,
-        get_path_for_ply(DEFAULT_BOOK_PLY).display()
+        book_path.display()
     );
 
     let existing_book = Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY);
@@ -247,15 +261,22 @@ pub fn generate_book() -> Result<(), std::io::Error> {
 
     let mut total_benchmark = Benchmark::empty();
     let mut solved = 0;
-    let mut book_writer = BookWriter::create_for_ply(DEFAULT_BOOK_PLY)?;
+
+    let mut engine = Engine::new();
+    let file = File::create(book_path.as_path())?;
+    let mut book_writer = BookWriter::create(file, BookFormat::Hex);
+
     for (count, pos) in set.into_iter().enumerate() {
         let existing_score = existing_book.get(&pos);
         if existing_score != Score::Unknown {
-            book_writer.write_entry(pos, existing_score)?;
+            book_writer.write_entry(&BookEntry::new(&pos, existing_score))?;
             continue;
         }
 
-        let benchmark = book_writer.solve_position(pos)?;
+        engine.set_position(pos);
+        let benchmark = Benchmark::run(&mut engine);
+        book_writer.write_entry(&BookEntry::new(&pos, benchmark.score))?;
+
         total_benchmark = total_benchmark.add(&benchmark);
         solved += 1;
 
@@ -325,7 +346,7 @@ pub fn verify_book(book1_path: &Path, book2_path: &Path) -> Result<(), std::io::
 fn find_positions_to_solve() -> BTreeSet<Position> {
     let mut set = BTreeSet::new();
     explore_tree(Position::empty(), 8, &mut |pos| {
-        let (pos, _symmetric) = pos.normalize();
+        let pos = pos.normalize();
         set.insert(pos);
     });
     set
