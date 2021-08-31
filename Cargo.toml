@@ -16,3 +16,7 @@ path = "src/lib.rs"
 num-traits = "0.2"
 num-derive = "0.2"
 clap = { version = "3.0.0-beta.4", optional = true }
+
+[profile.dev]
+opt-level = 3
+overflow-checks = false
