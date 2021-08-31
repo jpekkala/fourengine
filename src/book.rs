@@ -3,8 +3,9 @@ use crate::bitboard::{Bitboard, BoardInteger, Position, BOARD_HEIGHT, BOARD_WIDT
 use crate::engine::Engine;
 use crate::score::{Score, SCORE_BITS};
 use core::mem;
+use std::cmp;
 use std::cmp::Ordering;
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 use std::fs::{create_dir_all, File};
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::{Path, PathBuf};
@@ -125,14 +126,21 @@ impl Book {
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
-}
 
-impl IntoIterator for Book {
-    type Item = PackedPositionScore;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
+    pub fn iter(&self) -> impl Iterator<Item = &PackedPositionScore> {
+        self.entries.iter()
+    }
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.entries.into_iter()
+    pub fn to_position_set(&self) -> HashSet<Position> {
+        let mut set = HashSet::new();
+        for pos_score in self.iter() {
+            let position = pos_score.get_position();
+            let score = pos_score.get_score();
+            if score != Score::Unknown {
+                set.insert(position);
+            }
+        }
+        set
     }
 }
 
@@ -267,33 +275,48 @@ pub fn generate_book() -> Result<(), std::io::Error> {
     Ok(())
 }
 
-pub fn verify_book(book: &Path, reference_book: &Path) -> Result<(), std::io::Error> {
-    let book = Book::open(book)?;
-    let reference_book = Book::open(reference_book)?;
+pub fn verify_book(book1_path: &Path, book2_path: &Path) -> Result<(), std::io::Error> {
+    let book1 = Book::open(book1_path)?;
+    let book2 = Book::open(book2_path)?;
 
-    let mut missing_count = 0;
-    let mut invalid_count = 0;
-    for p in reference_book.into_iter() {
-        let position = p.get_position();
-        let reference_score = p.get_score();
-        let score = book.get(&position);
-        if score == Score::Unknown {
-            missing_count += 1;
-        } else if reference_score != score {
-            invalid_count += 1;
-        }
+    let positions1 = book1.to_position_set();
+    let positions2 = book2.to_position_set();
+
+    let shared = positions1.intersection(&positions2);
+    let conflict_count = shared
+        .filter(|pos| book1.get(pos) != book2.get(pos))
+        .count();
+
+    if conflict_count > 0 {
+        panic!("{} positions with conflicting scores", conflict_count);
     }
 
-    if missing_count > 0 {
-        println!(
-            "Warning: {} entries missing from the generated book",
-            missing_count
-        );
-    }
-    if invalid_count > 0 {
-        panic!("{} invalid positions", invalid_count);
+    let count1 = positions1.len();
+    let count2 = positions2.len();
+    let width = cmp::max(count1.to_string().len(), count2.to_string().len());
+    println!(
+        "There are {:>width$} positions in {}",
+        count1,
+        book1_path.display(),
+        width = width
+    );
+    println!(
+        "There are {:>width$} positions in {}",
+        count2,
+        book2_path.display(),
+        width = width
+    );
+    println!();
+
+    let diff_count = positions1.symmetric_difference(&positions2).count();
+    if diff_count == 0 {
+        println!("The books match exactly");
     } else {
-        println!("The generated book is OK");
+        let shared_count = positions1.intersection(&positions2).count();
+        println!(
+            "The books have matching scores but they share only {} positions",
+            shared_count
+        );
     }
 
     Ok(())
