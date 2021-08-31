@@ -6,7 +6,7 @@ use core::mem;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashSet};
 use std::fs::{create_dir_all, File};
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Write, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::{cmp, io};
 
@@ -22,8 +22,9 @@ pub fn get_path_for_ply(ply: u32) -> PathBuf {
 pub struct BookEntry(BoardInteger);
 
 impl BookEntry {
+    const BYTE_COUNT: usize = mem::size_of::<BoardInteger>();
     // Score is saved in the most significant bits by shifting left
-    const SCORE_SHIFT: u32 = (mem::size_of::<BoardInteger>() * 8) as u32 - SCORE_BITS;
+    const SCORE_SHIFT: u32 = (Self::BYTE_COUNT * 8) as u32 - SCORE_BITS;
     const POSITION_MASK: BoardInteger = (1 << Self::SCORE_SHIFT) - 1;
 
     pub fn new(position: &Position, score: Score) -> Self {
@@ -44,7 +45,7 @@ impl BookEntry {
         Score::from_u64_fast(self.0 >> Self::SCORE_SHIFT)
     }
 
-    fn as_hex_string(&self) -> String {
+    fn to_hex_string(&self) -> String {
         format!(
             "{}{}",
             self.get_position().as_hex_string(),
@@ -104,6 +105,19 @@ impl BookEntry {
     fn autodetect_parse(line: &str) -> Option<BookEntry> {
         Self::from_hex_string(line).or_else(|| Self::from_verbose_string(line))
     }
+
+    pub fn to_bytes(&self) -> [u8; Self::BYTE_COUNT] {
+        self.0.to_be_bytes()
+    }
+
+    pub fn from_bytes(bytes: &[u8; Self::BYTE_COUNT]) -> Option<BookEntry> {
+        let mut board: BoardInteger = 0;
+        for byte in bytes {
+            board = board << 8;
+            board = board | *byte as u64;
+        }
+        Some(BookEntry(board))
+    }
 }
 
 impl Ord for BookEntry {
@@ -135,34 +149,63 @@ impl Book {
         Book::open(&get_path_for_ply(ply)).unwrap_or_else(|_| Book::empty())
     }
 
-    pub fn from_lines(data: &str) -> Book {
-        let mut book = Book::empty();
-        for line in data.lines() {
-            book.include_line(line);
+    pub fn open(file_path: &Path) -> Result<Book, std::io::Error> {
+        let file = File::open(file_path)?;
+        let mut buf = BufReader::new(file);
+        //Self::read_binary_book(&mut buf)
+        match Self::read_text_book(&mut buf) {
+            Ok(book) => Ok(book),
+            Err(err) => {
+                buf.seek(SeekFrom::Start(0))?;
+                if let Ok(book) = Self::read_binary_book(&mut buf) {
+                    Ok(book)
+                } else {
+                    Err(err)
+                }
+            }
         }
-        book.sort_and_shrink();
-        book
     }
 
-    pub fn open(file_path: &Path) -> Result<Book, std::io::Error> {
+    fn read_text_book(reader: &mut BufReader<File>) -> Result<Book, std::io::Error> {
         let mut book = Book::empty();
-        let file = File::open(file_path)?;
-        for line in BufReader::new(file).lines() {
+        for line in reader.lines() {
             let line = line?;
             if !line.trim().is_empty() {
-                book.include_line(&line);
+                if let Some(book_entry) = BookEntry::autodetect_parse(&line) {
+                    book.entries.push(book_entry);
+                } else {
+                    let err = std::io::Error::new(
+                        ErrorKind::InvalidData,
+                        format!("Invalid position: {}", line),
+                    );
+                    return Err(err);
+                }
             }
         }
         book.sort_and_shrink();
         Ok(book)
     }
 
-    fn include_line(&mut self, line: &str) {
-        if let Some(book_entry) = BookEntry::autodetect_parse(line) {
-            self.entries.push(book_entry);
-        } else {
-            panic!("Unknown line: {}", line);
+    fn read_binary_book(reader: &mut BufReader<File>) -> Result<Book, std::io::Error> {
+        let mut book = Book::empty();
+        let mut buffer = [0; BookEntry::BYTE_COUNT];
+
+        loop {
+            match reader.read_exact(&mut buffer) {
+                Ok(_) => {
+                    let entry = BookEntry::from_bytes(&buffer).ok_or(std::io::Error::new(
+                        ErrorKind::InvalidData,
+                        "Invalid position",
+                    ))?;
+                    book.entries.push(entry);
+                }
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => return Err(e),
+            }
         }
+
+        book.sort_and_shrink();
+        Ok(book)
     }
 
     fn sort_and_shrink(&mut self) {
@@ -221,11 +264,11 @@ impl<W: Write> BookWriter<W> {
     pub fn write_entry(&mut self, entry: &BookEntry) -> io::Result<()> {
         match &self.format {
             BookFormat::Hex => {
-                let line = entry.as_hex_string();
+                let line = entry.to_hex_string();
                 self.writer.write_all(line.as_bytes())?;
                 self.writer.write_all(b"\n")
             }
-            BookFormat::Binary => self.writer.write_all(&entry.0.to_be_bytes()),
+            BookFormat::Binary => self.writer.write_all(&entry.to_bytes()),
         }
     }
 }
