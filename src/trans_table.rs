@@ -175,10 +175,10 @@ mod tests {
         let mut tt = TransTable::new(table_size);
 
         let offset = Position::empty().to_position_code();
-        let pos1 = Position::from_position_code(offset + table_size as BoardInteger);
-        let pos2 = Position::from_position_code(offset + 2 * table_size as BoardInteger);
-        let pos3 = Position::from_position_code(offset + 3 * table_size as BoardInteger);
-        let pos4 = Position::from_position_code(offset + 4 * table_size as BoardInteger);
+        let pos1 = Position::from_position_code(offset + table_size as BoardInteger).unwrap();
+        let pos2 = Position::from_position_code(offset + 2 * table_size as BoardInteger).unwrap();
+        let pos3 = Position::from_position_code(offset + 3 * table_size as BoardInteger).unwrap();
+        let pos4 = Position::from_position_code(offset + 4 * table_size as BoardInteger).unwrap();
 
         tt.store(pos1.to_position_code(), Score::Win, 300);
         tt.store(pos2.to_position_code(), Score::Win, 600);

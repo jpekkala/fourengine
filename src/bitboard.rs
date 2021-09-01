@@ -196,7 +196,7 @@ impl Position {
         Position { current, other }
     }
 
-    pub fn from_position_code(code: BoardInteger) -> Position {
+    pub fn from_position_code(code: BoardInteger) -> Option<Position> {
         // TODO: optimize?
         let mut both = 0;
         for x in 0..BOARD_WIDTH {
@@ -207,7 +207,9 @@ impl Position {
                 count += 1;
                 temp >>= 1;
             }
-            assert!(count > 0);
+            if count == 0 {
+                return None;
+            }
             let mask = (1 << (count - 1)) - 1;
             both |= mask << x * BIT_HEIGHT;
         }
@@ -215,7 +217,7 @@ impl Position {
         let current = Bitboard(code & both);
         let other = Bitboard(!code & both);
 
-        Position { current, other }
+        Some(Position { current, other })
     }
 
     pub fn from_variation(variation: &str) -> Option<Position> {
@@ -395,7 +397,7 @@ impl Position {
         let str = str.trim();
         if str.len() == 2 * mem::size_of::<BoardInteger>() {
             let code = BoardInteger::from_str_radix(str, 16).ok()?;
-            Some(Position::from_position_code(code))
+            Position::from_position_code(code)
         } else {
             None
         }
@@ -411,6 +413,10 @@ impl Position {
         } else {
             (code2, symmetric)
         }
+    }
+
+    pub fn get_legal_moves(&self) -> MoveBitmap {
+        MoveBitmap(self.get_height_cells() & FULL_BOARD)
     }
 
     /// Returns all moves where the opponent does not have a threat directly above. Unblocked moves
@@ -582,6 +588,10 @@ impl MoveBitmap {
             }
         }
         &mut move_array[0..move_count]
+    }
+
+    pub fn as_bitboard(&self) -> Bitboard {
+        Bitboard(self.0)
     }
 }
 
@@ -900,7 +910,7 @@ mod tests {
     fn position_code() {
         let position1 = Position::from_variation("43443555").unwrap();
         let position_code = position1.to_position_code();
-        let position2 = Position::from_position_code(position_code);
+        let position2 = Position::from_position_code(position_code).unwrap();
         assert_eq!(position1, position2);
     }
 

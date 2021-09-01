@@ -6,7 +6,7 @@ use core::mem;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashSet};
 use std::fs::{create_dir_all, File};
-use std::io::{BufRead, BufReader, ErrorKind, Read, Write, Seek, SeekFrom};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::{cmp, io};
 
@@ -22,8 +22,12 @@ pub fn get_path_for_ply(ply: u32) -> PathBuf {
 pub struct BookEntry(BoardInteger);
 
 impl BookEntry {
+    // Score is saved in the most significant bits by shifting left and the position can be derived
+    // with a simple mask. An alternative design would have been to shift position left to make room
+    // for score, which would have had the benefit that entries are numerically sorted in the file.
+    // The current design was chosen in case we want to encode more information in the empty space
+    // between score and position.
     const BYTE_COUNT: usize = mem::size_of::<BoardInteger>();
-    // Score is saved in the most significant bits by shifting left
     const SCORE_SHIFT: u32 = (Self::BYTE_COUNT * 8) as u32 - SCORE_BITS;
     const POSITION_MASK: BoardInteger = (1 << Self::SCORE_SHIFT) - 1;
 
@@ -34,7 +38,7 @@ impl BookEntry {
     }
 
     pub fn get_position(&self) -> Position {
-        Position::from_position_code(self.get_position_code())
+        Position::from_position_code(self.get_position_code()).unwrap()
     }
 
     pub fn get_position_code(&self) -> BoardInteger {
@@ -61,7 +65,7 @@ impl BookEntry {
 
         let position_str = &line[0..HEX_LENGTH];
         let position_code = BoardInteger::from_str_radix(position_str, 16).ok()?;
-        let position = Position::from_position_code(position_code);
+        let position = Position::from_position_code(position_code)?;
 
         let score = Score::from_string(&line[HEX_LENGTH..]);
         if score == Score::Unknown {
@@ -152,7 +156,6 @@ impl Book {
     pub fn open(file_path: &Path) -> Result<Book, std::io::Error> {
         let file = File::open(file_path)?;
         let mut buf = BufReader::new(file);
-        //Self::read_binary_book(&mut buf)
         match Self::read_text_book(&mut buf) {
             Ok(book) => Ok(book),
             Err(err) => {

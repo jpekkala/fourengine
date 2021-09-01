@@ -1,5 +1,5 @@
 use crate::benchmark::Benchmark;
-use crate::bitboard::Position;
+use crate::bitboard::{Bitboard, Position};
 use crate::book::{
     generate_book, get_path_for_ply, verify_book, Book, BookFormat, BookWriter, DEFAULT_BOOK_PLY,
 };
@@ -181,6 +181,41 @@ fn play(matches: &ArgMatches) -> Result<(), String> {
     solve(position_input, use_book)
 }
 
+fn print_subcommand(matches: &ArgMatches) -> Result<(), String> {
+    let variation = matches.value_of("variation").unwrap_or("");
+    let position = if matches.is_present("hex") {
+        PositionInput::Hex(String::from(variation))
+    } else {
+        PositionInput::Variation(String::from(variation))
+    }
+    .parse()?;
+
+    print_board(position);
+
+    if matches.is_present("technical") {
+        println!();
+        println!("Hex code: {}", position.as_hex_string());
+        let (normalized_code, symmetric) = position.to_normalized_position_code();
+        println!("Normalized code: {}", Position::from_position_code(normalized_code).unwrap().as_hex_string());
+        println!("Symmetric: {}", symmetric);
+        println!("Guessed variation: {}", position.guess_variation().unwrap_or("N/A".to_string()));
+        let unblocked_moves = position.get_unblocked_moves();
+        println!("Autoscore: {:?}", position.autofinish_score(unblocked_moves));
+        println!();
+        print_bitboard("Current", position.current);
+        print_bitboard("Other", position.other);
+        print_bitboard("Legal moves",  position.get_legal_moves().as_bitboard());
+        print_bitboard("Unblocked moves", unblocked_moves.as_bitboard());
+        print_bitboard("Immediate wins",  position.get_immediate_wins().as_bitboard());
+        print_bitboard("Immediate threats",  position.to_other_perspective().get_immediate_wins().as_bitboard());
+    }
+    Ok(())
+}
+
+fn print_bitboard(title: &str, bitboard: Bitboard) {
+    println!("{} ({} bits):\n{}", title, bitboard.0.count_ones(), bitboard);
+}
+
 fn print_board(position: Position) {
     println!(
         "The board is:\n{}\nPlayer {} moves next",
@@ -254,6 +289,12 @@ fn main() {
                     Arg::new("hex")
                         .long("hex")
                         .about("Interpret the variation as a hexadecimal 64-bit position code"),
+                )
+                .arg(
+                    Arg::new("technical")
+                        .short('t')
+                        .long("technical")
+                        .about("Include technical details"),
                 ),
         )
         .subcommand(
@@ -289,21 +330,7 @@ fn main() {
             format_book(sub_matches).map_err(|err| err.to_string())
         }
         Some(("generate-book", _)) => generate_book().map_err(|err| err.to_string()),
-        Some(("print", sub_matches)) => {
-            let variation = sub_matches.value_of("variation").unwrap_or("");
-            let pos_input = if sub_matches.is_present("hex") {
-                PositionInput::Hex(String::from(variation))
-            } else {
-                PositionInput::Variation(String::from(variation))
-            };
-            match pos_input.parse() {
-                Ok(pos) => {
-                    print_board(pos);
-                    Ok(())
-                }
-                Err(str) => Err(str),
-            }
-        }
+        Some(("print", sub_matches)) => print_subcommand(sub_matches),
         Some(("solve", sub_matches)) => {
             let variation = sub_matches.value_of("variation").unwrap_or("");
             let pos_input = if sub_matches.is_present("hex") {
