@@ -169,6 +169,40 @@ impl Bitboard {
         let helper = self.0 | GUTTER_ROW;
         helper & (!helper + BOTTOM_ROW)
     }
+
+    /// Finds the highest set bit for each column and then sets all cells below the highest bit as
+    /// well.
+    /// ```
+    /// use fourengine::bitboard::*;
+    /// use fourengine::*;
+    ///
+    /// let position = position!(
+    ///     "......."
+    ///     "......."
+    ///     "......."
+    ///     "....O.."
+    ///     "..X.XO."
+    ///     "..OXOXX"
+    /// );
+    ///
+    /// let silhouette = bitboard!(
+    ///     "0000000"
+    ///     "0000000"
+    ///     "0000000"
+    ///     "0000000"
+    ///     "0000100"
+    ///     "0010110"
+    ///     "0011111"
+    /// );
+    /// assert_eq!(position.get_silhouette().get_silhouette(), silhouette);
+    /// ```
+    pub fn get_silhouette(&self) -> Bitboard {
+        let mut tmp = self.0;
+        for _ in 0..(BOARD_HEIGHT - 1) {
+            tmp |= (tmp >> 1) & FULL_BOARD;
+        }
+        Bitboard(tmp)
+    }
 }
 
 #[inline]
@@ -197,27 +231,25 @@ impl Position {
     }
 
     pub fn from_position_code(code: BoardInteger) -> Option<Position> {
-        // TODO: optimize?
-        let mut both = 0;
-        for x in 0..BOARD_WIDTH {
-            let column = (code >> x * BIT_HEIGHT) & FIRST_COLUMN;
-            let mut count = 0;
-            let mut temp = column;
-            while temp != 0 {
-                count += 1;
-                temp >>= 1;
-            }
-            if count == 0 {
-                return None;
-            }
-            let mask = (1 << (count - 1)) - 1;
-            both |= mask << x * BIT_HEIGHT;
+        let silhouette = Bitboard(code).get_silhouette();
+        // every column must have at least one bit set that indicates the height
+        if (silhouette.0 & BOTTOM_ROW) != BOTTOM_ROW {
+            return None;
         }
 
+        let both = (silhouette.0 >> 1) & FULL_BOARD;
         let current = Bitboard(code & both);
         let other = Bitboard(!code & both);
-
         Some(Position { current, other })
+    }
+
+    pub fn as_bitboard(&self) -> Bitboard {
+        Bitboard(self.to_position_code())
+    }
+
+    pub fn get_silhouette(&self) -> Bitboard {
+        let board = (self.to_position_code() >> 1) & FULL_BOARD;
+        Bitboard(board).get_silhouette()
     }
 
     pub fn from_variation(variation: &str) -> Option<Position> {
@@ -385,7 +417,15 @@ impl Position {
         self.get_threats().0.count_ones()
     }
 
+    /// An integer that uniquely represents the position. For each column, the highest bit indicates
+    /// the lowest empty cell and all cells below it are filled. For each filled cell, 1 is the
+    /// current player and 0 is the other player.
     pub fn to_position_code(&self) -> BoardInteger {
+        // Step 1: current + other creates a silhouette of the board
+        // Step 2: after adding bottom row to the silhouette, each column has exactly one bit set
+        //         which indicates the height of the column (plus one)
+        // Step 3: adding current again is the same as bitwise OR because the result of step 2 has
+        //         only zeroes below the height bit
         BOTTOM_ROW + self.current.0 + self.current.0 + self.other.0
     }
 
