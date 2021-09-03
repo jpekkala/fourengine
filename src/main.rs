@@ -1,10 +1,10 @@
-use crate::benchmark::Benchmark;
-use crate::bitboard::{Bitboard, Position};
-use crate::book::{
+use fourengine::benchmark::Benchmark;
+use fourengine::bitboard::{Bitboard, Position};
+use fourengine::book::{
     generate_book, get_path_for_ply, verify_book, Book, BookFormat, BookWriter, DEFAULT_BOOK_PLY,
 };
-use crate::engine::Engine;
-use crate::score::Score;
+use fourengine::engine::Engine;
+use fourengine::score::Score;
 use clap::{crate_version, App, Arg, ArgMatches};
 use std::cmp::Ordering;
 use std::fmt;
@@ -12,14 +12,6 @@ use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
-
-pub mod benchmark;
-pub mod bitboard;
-pub mod book;
-pub mod engine;
-pub mod heuristic;
-pub mod score;
-pub mod trans_table;
 
 /// User input representing a position. The purpose of this is to be able to report errors using
 /// the same string that the user gave. Using Position directly would lose that information.
