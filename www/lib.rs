@@ -61,6 +61,27 @@ impl JsPosition {
     }
 }
 
+#[wasm_bindgen(js_name = Book)]
+pub struct JsBook {
+    book: Book,
+}
+
+#[wasm_bindgen(js_class = Book)]
+impl JsBook {
+    #[wasm_bindgen(constructor)]
+    pub fn new() -> JsBook {
+        JsBook {
+            book: Book::empty()
+        }
+    }
+
+    #[wasm_bindgen(js_name = includeLines)]
+    pub fn include_lines(&mut self, data: &str) {
+        let book = Book::from_lines(data).expect("Invalid book");
+        self.book.include_book(&book);
+    }
+}
+
 #[wasm_bindgen(js_name = Engine)]
 pub struct JsEngine {
     engine: Engine,
@@ -76,9 +97,8 @@ impl JsEngine {
     }
 
     #[wasm_bindgen(js_name = setBook)]
-    pub fn set_book(&mut self, data: &str) {
-        let book = Box::new(Book::from_lines(data).expect("Invalid book"));
-        self.engine.set_book(book);
+    pub fn set_book(&mut self, book: JsBook) {
+        self.engine.set_book(Box::new(book.book));
     }
 
     #[wasm_bindgen]

@@ -27,29 +27,33 @@ const wasmPromise = import('../pkg/fourengine_wasm.js').then(wasm => {
     throw error;
 });
 
-// TODO: Load book outside of worker so that it can be shared between workers
-const bookPromise = fetch('7x6-ply8.txt').then(response => {
-    if (!response.ok) {
-        throw Error(`${response.status} ${response.statusText}`);
-    }
-    console.log('Book loaded');
-    return response.text();
-}).catch(err => {
-    console.error('Error loading book:', err.message);
-});
+// TODO: Load books outside of worker so that it can be shared between workers
+function fetchBook(ply) {
+    return fetch(`7x6-ply${ply}.txt`).then(response => {
+        if (!response.ok) {
+            throw Error(`${response.status} ${response.statusText}`);
+        }
+        console.log('Book loaded');
+        return response.text();
+    }).catch(err => {
+        console.error('Error loading book:', err.message);
+        return '';
+    });
+}
 
-const enginePromise = Promise.all([wasmPromise, bookPromise]).then(values => {
-    const [wasm, book] = values;
+const enginePromise = Promise.all([wasmPromise, fetchBook(4), fetchBook(8)]).then(values => {
+    const [wasm, ply4, ply8] = values;
     const engine = new wasm.Engine();
-    if (book) {
-        engine.setBook(book);
-    }
+    const book = new wasm.Book();
+    book.includeLines(ply4);
+    book.includeLines(ply8);
+    engine.setBook(book);
     return engine;
 });
 
 self.onmessage = async function (e) {
     try {
-        const [ engine, book ] = await Promise.all([enginePromise, bookPromise]);
+        const engine = await enginePromise;
         const { variation } = e.data;
         const start = performance.now();
         const struct = engine.solve(variation);
