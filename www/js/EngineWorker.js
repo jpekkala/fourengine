@@ -28,7 +28,7 @@ const wasmPromise = import('../pkg/fourengine_wasm.js').then(wasm => {
 });
 
 // TODO: Load book outside of worker so that it can be shared between workers
-const bookPromise = fetch('8-ply.txt').then(response => {
+const bookPromise = fetch('7x6-ply8.txt').then(response => {
     if (!response.ok) {
         throw Error(`${response.status} ${response.statusText}`);
     }

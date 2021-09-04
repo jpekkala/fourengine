@@ -13,7 +13,7 @@ module.exports = {
             patterns: [{
                 from: 'public/index.html',
             }, {
-                from: '../books/8-ply.txt',
+                from: '../books/7x6-ply8.txt',
             }]
         })
     ],

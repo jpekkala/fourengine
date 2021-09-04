@@ -29,7 +29,7 @@ impl JsPosition {
 
     #[wasm_bindgen(js_name = hasWon)]
     pub fn has_won(&self) -> bool {
-        self.position.has_won()
+        self.position.has_anyone_won()
     }
 
     #[wasm_bindgen(js_name = isWinningCell)]
@@ -77,7 +77,7 @@ impl JsEngine {
 
     #[wasm_bindgen(js_name = setBook)]
     pub fn set_book(&mut self, data: &str) {
-        let book = Box::new(Book::from_lines(data));
+        let book = Box::new(Book::from_lines(data).expect("Invalid book"));
         self.engine.set_book(book);
     }
 

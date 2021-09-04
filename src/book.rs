@@ -169,7 +169,23 @@ impl Book {
         }
     }
 
-    fn read_text_book(reader: &mut BufReader<File>) -> Result<Book, std::io::Error> {
+    /// Creates a new book from a string that contains one position per line
+    /// ```
+    /// use fourengine::book::Book;
+    ///
+    /// let mut str = String::new();
+    /// str.push_str("0000040812A04081+\n"); // variation 4444
+    /// str.push_str("000004081040C103-\n"); // variation 1234
+    ///
+    /// let book = Book::from_lines(&str).unwrap();
+    /// assert_eq!(book.len(), 2);
+    /// ```
+    pub fn from_lines(data: &str) -> Result<Book, std::io::Error> {
+        let mut reader = BufReader::new(data.as_bytes());
+        Self::read_text_book(&mut reader)
+    }
+
+    fn read_text_book<R: Read>(reader: &mut BufReader<R>) -> Result<Book, std::io::Error> {
         let mut book = Book::empty();
         for line in reader.lines() {
             let line = line?;
@@ -189,7 +205,7 @@ impl Book {
         Ok(book)
     }
 
-    fn read_binary_book(reader: &mut BufReader<File>) -> Result<Book, std::io::Error> {
+    fn read_binary_book<R: Read>(reader: &mut BufReader<R>) -> Result<Book, std::io::Error> {
         let mut book = Book::empty();
         let mut buffer = [0; BookEntry::BYTE_COUNT];
 

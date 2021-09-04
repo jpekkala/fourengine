@@ -1,3 +1,4 @@
+use clap::{crate_version, App, Arg, ArgMatches};
 use fourengine::benchmark::Benchmark;
 use fourengine::bitboard::{Bitboard, Position};
 use fourengine::book::{
@@ -5,7 +6,6 @@ use fourengine::book::{
 };
 use fourengine::engine::Engine;
 use fourengine::score::Score;
-use clap::{crate_version, App, Arg, ArgMatches};
 use std::cmp::Ordering;
 use std::fmt;
 use std::fs::File;
@@ -188,24 +188,49 @@ fn print_subcommand(matches: &ArgMatches) -> Result<(), String> {
         println!();
         println!("Hex code: {}", position.as_hex_string());
         let (normalized_code, symmetric) = position.to_normalized_position_code();
-        println!("Normalized code: {}", Position::from_position_code(normalized_code).unwrap().as_hex_string());
+        println!(
+            "Normalized code: {}",
+            Position::from_position_code(normalized_code)
+                .unwrap()
+                .as_hex_string()
+        );
         println!("Symmetric: {}", symmetric);
-        println!("Guessed variation: {}", position.guess_variation().unwrap_or("N/A".to_string()));
+        println!(
+            "Guessed variation: {}",
+            position.guess_variation().unwrap_or("N/A".to_string())
+        );
         let unblocked_moves = position.get_unblocked_moves();
-        println!("Autoscore: {:?}", position.autofinish_score(unblocked_moves));
+        println!(
+            "Autoscore: {:?}",
+            position.autofinish_score(unblocked_moves)
+        );
         println!();
         print_bitboard("Current", position.current);
         print_bitboard("Other", position.other);
-        print_bitboard("Legal moves",  position.get_legal_moves().as_bitboard());
+        print_bitboard("Legal moves", position.get_legal_moves().as_bitboard());
         print_bitboard("Unblocked moves", unblocked_moves.as_bitboard());
-        print_bitboard("Immediate wins",  position.get_immediate_wins().as_bitboard());
-        print_bitboard("Immediate threats",  position.to_other_perspective().get_immediate_wins().as_bitboard());
+        print_bitboard(
+            "Immediate wins",
+            position.get_immediate_wins().as_bitboard(),
+        );
+        print_bitboard(
+            "Immediate threats",
+            position
+                .to_other_perspective()
+                .get_immediate_wins()
+                .as_bitboard(),
+        );
     }
     Ok(())
 }
 
 fn print_bitboard(title: &str, bitboard: Bitboard) {
-    println!("{} ({} bits):\n{}", title, bitboard.0.count_ones(), bitboard);
+    println!(
+        "{} ({} bits):\n{}",
+        title,
+        bitboard.0.count_ones(),
+        bitboard
+    );
 }
 
 fn print_board(position: Position) {
