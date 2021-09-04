@@ -18,7 +18,7 @@ pub fn get_path_for_ply(ply: u32) -> PathBuf {
 }
 
 /// Packs a position code and its score in one value
-#[derive(PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct BookEntry(BoardInteger);
 
 impl BookEntry {
@@ -151,12 +151,23 @@ impl Book {
         }
     }
 
-    pub fn open_for_ply(ply: u32) -> Result<Book, std::io::Error> {
-        Book::open(&get_path_for_ply(ply))
+    pub fn standard() -> Book {
+        let mut book = Book::empty();
+        book.include_book(&Self::ply(4));
+        book.include_book(&Self::ply(8));
+        book
     }
 
-    pub fn open_for_ply_or_empty(ply: u32) -> Book {
-        Book::open(&get_path_for_ply(ply)).unwrap_or_else(|_| Book::empty())
+    pub fn ply(ply: u32) -> Book {
+        let path = get_path_for_ply(ply);
+        Self::open(path.as_path()).unwrap_or_else(|_| Book::empty())
+    }
+
+    pub fn include_book(&mut self, another_book: &Book) {
+        for entry in another_book.iter() {
+            self.add_entry(*entry)
+        }
+        self.sort_and_shrink()
     }
 
     pub fn open(file_path: &Path) -> Result<Book, std::io::Error> {
@@ -321,7 +332,7 @@ pub fn generate_book(ply: u32, use_book: Option<&Path>) -> Result<(), std::io::E
         book_path.display()
     );
 
-    let existing_book = Book::open_for_ply_or_empty(ply);
+    let existing_book = Book::open(book_path.as_path())?;
     if !existing_book.is_empty() {
         println!("Found {} existing positions", existing_book.len());
     }

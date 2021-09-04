@@ -258,7 +258,7 @@ fn solve(pos_input: PositionInput, use_book: bool) -> Result<(), String> {
 
     let mut engine = Engine::new();
     if use_book {
-        let book = Box::new(Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY));
+        let book = Box::new(Book::standard());
         engine.set_book(book);
     }
     engine.set_position(position);
