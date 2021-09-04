@@ -295,7 +295,13 @@ fn main() {
         .subcommand(
             App::new("generate-book")
                 .about("Generates and saves an opening book")
-                .arg(Arg::new("out").long("out").takes_value(true)),
+                .arg(Arg::new("out").long("out").takes_value(true))
+                .arg(
+                    Arg::new("ply")
+                        .long("ply")
+                        .about("Solves and saves all positions that have the specified ply")
+                        .default_value("8"),
+                ),
         )
         .subcommand(
             App::new("print")
@@ -346,7 +352,10 @@ fn main() {
         Some(("format-book", sub_matches)) => {
             format_book(sub_matches).map_err(|err| err.to_string())
         }
-        Some(("generate-book", _)) => generate_book().map_err(|err| err.to_string()),
+        Some(("generate-book", sub_matches)) => {
+            let ply = sub_matches.value_of("ply").unwrap().parse().unwrap();
+            generate_book(ply).map_err(|err| err.to_string())
+        }
         Some(("print", sub_matches)) => print_subcommand(sub_matches),
         Some(("solve", sub_matches)) => {
             let variation = sub_matches.value_of("variation").unwrap_or("");

@@ -292,11 +292,11 @@ impl<W: Write> BookWriter<W> {
     }
 }
 
-pub fn generate_book() -> Result<(), std::io::Error> {
+pub fn generate_book(ply: u32) -> Result<(), std::io::Error> {
     create_dir_all(BOOK_FOLDER)?;
-    let book_path = get_path_for_ply(DEFAULT_BOOK_PLY);
+    let book_path = get_path_for_ply(ply);
 
-    let set = find_positions_to_solve();
+    let set = find_positions_to_solve(ply);
     let total_count = set.len();
     println!(
         "There are {} positions to solve. Saving book as {}",
@@ -304,7 +304,7 @@ pub fn generate_book() -> Result<(), std::io::Error> {
         book_path.display()
     );
 
-    let existing_book = Book::open_for_ply_or_empty(DEFAULT_BOOK_PLY);
+    let existing_book = Book::open_for_ply_or_empty(ply);
     if !existing_book.is_empty() {
         println!("Found {} existing positions", existing_book.len());
     }
@@ -393,9 +393,9 @@ pub fn verify_book(book1_path: &Path, book2_path: &Path) -> Result<(), std::io::
     Ok(())
 }
 
-fn find_positions_to_solve() -> BTreeSet<Position> {
+fn find_positions_to_solve(ply: u32) -> BTreeSet<Position> {
     let mut set = BTreeSet::new();
-    explore_tree(Position::empty(), 8, &mut |pos| {
+    explore_tree(Position::empty(), ply, &mut |pos| {
         let pos = pos.normalize();
         set.insert(pos);
     });
