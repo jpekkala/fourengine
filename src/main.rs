@@ -197,7 +197,9 @@ fn print_subcommand(matches: &ArgMatches) -> Result<(), String> {
         println!("Symmetric: {}", symmetric);
         println!(
             "Guessed variation: {}",
-            position.guess_variation().unwrap_or("N/A".to_string())
+            position
+                .guess_variation()
+                .unwrap_or_else(|| "N/A".to_string())
         );
         let unblocked_moves = position.get_unblocked_moves();
         println!(
@@ -301,6 +303,12 @@ fn main() {
                         .long("ply")
                         .about("Solves and saves all positions that have the specified ply")
                         .default_value("8"),
+                )
+                .arg(
+                    Arg::new("use-book")
+                        .long("use-book")
+                        .about("Uses another book when solving positions. Useful if generating a lower-ply book when a higher-ply book already exists.")
+                        .takes_value(true)
                 ),
         )
         .subcommand(
@@ -354,7 +362,8 @@ fn main() {
         }
         Some(("generate-book", sub_matches)) => {
             let ply = sub_matches.value_of("ply").unwrap().parse().unwrap();
-            generate_book(ply).map_err(|err| err.to_string())
+            let use_book = sub_matches.value_of("use-book").map(|str| Path::new(str));
+            generate_book(ply, use_book).map_err(|err| err.to_string())
         }
         Some(("print", sub_matches)) => print_subcommand(sub_matches),
         Some(("solve", sub_matches)) => {

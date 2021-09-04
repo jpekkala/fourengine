@@ -117,8 +117,8 @@ impl BookEntry {
     pub fn from_bytes(bytes: &[u8; Self::BYTE_COUNT]) -> Option<BookEntry> {
         let mut board: BoardInteger = 0;
         for byte in bytes {
-            board = board << 8;
-            board = board | *byte as u64;
+            board <<= 8;
+            board |= *byte as u64;
         }
         Some(BookEntry(board))
     }
@@ -138,11 +138,17 @@ impl PartialOrd for BookEntry {
 
 pub struct Book {
     entries: Vec<BookEntry>,
+    /// A bitwise union of the plies of positions stored in this book. It is recommended that books
+    /// contain plies that are powers of two (e.g. 4 and 8) so that the ply mask works efficiently.
+    ply_mask: u32,
 }
 
 impl Book {
     pub fn empty() -> Book {
-        Book { entries: vec![] }
+        Book {
+            entries: vec![],
+            ply_mask: 0,
+        }
     }
 
     pub fn open_for_ply(ply: u32) -> Result<Book, std::io::Error> {
@@ -190,8 +196,8 @@ impl Book {
         for line in reader.lines() {
             let line = line?;
             if !line.trim().is_empty() {
-                if let Some(book_entry) = BookEntry::autodetect_parse(&line) {
-                    book.entries.push(book_entry);
+                if let Some(entry) = BookEntry::autodetect_parse(&line) {
+                    book.add_entry(entry);
                 } else {
                     let err = std::io::Error::new(
                         ErrorKind::InvalidData,
@@ -212,11 +218,10 @@ impl Book {
         loop {
             match reader.read_exact(&mut buffer) {
                 Ok(_) => {
-                    let entry = BookEntry::from_bytes(&buffer).ok_or(std::io::Error::new(
-                        ErrorKind::InvalidData,
-                        "Invalid position",
-                    ))?;
-                    book.entries.push(entry);
+                    let entry = BookEntry::from_bytes(&buffer).ok_or_else(|| {
+                        std::io::Error::new(ErrorKind::InvalidData, "Invalid position")
+                    })?;
+                    book.add_entry(entry);
                 }
                 Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
                 Err(e) => return Err(e),
@@ -227,9 +232,21 @@ impl Book {
         Ok(book)
     }
 
+    fn add_entry(&mut self, entry: BookEntry) {
+        let ply = entry.get_position().get_ply();
+        self.ply_mask |= ply;
+        self.entries.push(entry);
+    }
+
     fn sort_and_shrink(&mut self) {
         self.entries.sort();
         self.entries.shrink_to_fit();
+    }
+
+    /// A fast check if there are any positions of the given ply in this book. This check is in the
+    /// hot path of the engine so it must be kept as simple as possible.
+    pub fn contains_ply(&self, ply: u32) -> bool {
+        self.ply_mask & ply != 0
     }
 
     pub fn get(&self, position: &Position) -> Score {
@@ -292,7 +309,7 @@ impl<W: Write> BookWriter<W> {
     }
 }
 
-pub fn generate_book(ply: u32) -> Result<(), std::io::Error> {
+pub fn generate_book(ply: u32, use_book: Option<&Path>) -> Result<(), std::io::Error> {
     create_dir_all(BOOK_FOLDER)?;
     let book_path = get_path_for_ply(ply);
 
@@ -313,6 +330,10 @@ pub fn generate_book(ply: u32) -> Result<(), std::io::Error> {
     let mut solved = 0;
 
     let mut engine = Engine::new();
+    if let Some(another_book_path) = use_book {
+        let another_book = Box::new(Book::open(another_book_path)?);
+        engine.set_book(another_book);
+    }
     let file = File::create(book_path.as_path())?;
     let mut book_writer = BookWriter::create(file, BookFormat::Hex);
 
