@@ -332,7 +332,7 @@ pub fn generate_book(ply: u32, use_book: Option<&Path>) -> Result<(), std::io::E
         book_path.display()
     );
 
-    let existing_book = Book::open(book_path.as_path())?;
+    let existing_book = Book::open(book_path.as_path()).unwrap_or_else(|_| Book::empty());
     if !existing_book.is_empty() {
         println!("Found {} existing positions", existing_book.len());
     }
