@@ -62,7 +62,38 @@ impl Bitboard {
         Bitboard(0)
     }
 
-    /// The reverse of to_string
+    /// The reverse of to_string. The gutter row (seventh row) is optional but to_string always
+    /// includes it.
+    ///
+    /// There is also a "bitboard!" macro which is somewhat more ergonomic to use especially when
+    /// writing tests.
+    /// ```
+    /// use fourengine::bitboard::*;
+    /// use fourengine::*;
+    ///
+    /// let string = concat!(
+    ///     "0000000\n",
+    ///     "0000000\n",
+    ///     "0000000\n",
+    ///     "0000000\n",
+    ///     "0000100\n",
+    ///     "0000010\n",
+    ///     "0010100\n",
+    /// );
+    /// let board = Bitboard::from_string(string).unwrap();
+    /// assert_eq!(board.to_string(), string);
+    ///
+    /// // the same but with a macro
+    /// let board_with_macro = bitboard!(
+    ///     "0000000"
+    ///     "0000000"
+    ///     "0000000"
+    ///     "0000100"
+    ///     "0000010"
+    ///     "0010100"
+    /// );
+    /// assert_eq!(board_with_macro, board);
+    /// ```
     pub fn from_string(str: &str) -> Option<Bitboard> {
         let mut bitboard = Bitboard::empty();
 
@@ -161,13 +192,37 @@ impl Bitboard {
 
     /// Returns a bitmap where only the lowest 1 bit in each column is kept set. If a column has no
     /// bits set, the gutter bit is set for that column instead.
-    fn keep_lowest_or_gutter(&self) -> BoardInteger {
+    /// ```
+    /// use fourengine::bitboard::*;
+    /// use fourengine::*;
+    ///
+    /// let board = bitboard!(
+    ///     "0000000"
+    ///     "0000000"
+    ///     "0000001"
+    ///     "0000000"
+    ///     "0000100"
+    ///     "0000010"
+    ///     "0010100"
+    /// );
+    ///
+    /// assert_eq!(board.keep_lowest_or_gutter(), bitboard!(
+    ///     "1101000"
+    ///     "0000000"
+    ///     "0000001"
+    ///     "0000000"
+    ///     "0000000"
+    ///     "0000010"
+    ///     "0010100"
+    /// ));
+    /// ```
+    pub fn keep_lowest_or_gutter(&self) -> Bitboard {
         // The formula for finding the least significant bit in a number is `v & (!v + 1)`
         // which for a bitboard can be generalized to `board & (!board + BOTTOM_ROW)`
 
         // prevent overflow by always having at least the gutter set
         let helper = self.0 | GUTTER_ROW;
-        helper & (!helper + BOTTOM_ROW)
+        Bitboard(helper & (!helper + BOTTOM_ROW))
     }
 
     /// Finds the highest set bit for each column and then sets all cells below the highest bit as
@@ -176,25 +231,25 @@ impl Bitboard {
     /// use fourengine::bitboard::*;
     /// use fourengine::*;
     ///
-    /// let position = position!(
-    ///     "......."
-    ///     "......."
-    ///     "......."
-    ///     "....O.."
-    ///     "..X.XO."
-    ///     "..OXOXX"
-    /// );
-    ///
-    /// let silhouette = bitboard!(
+    /// let board = bitboard!(
     ///     "0000000"
     ///     "0000000"
-    ///     "0000000"
+    ///     "0000001"
     ///     "0000000"
     ///     "0000100"
-    ///     "0010110"
-    ///     "0011111"
+    ///     "0000010"
+    ///     "0010100"
     /// );
-    /// assert_eq!(position.get_silhouette().get_silhouette(), silhouette);
+    ///
+    /// assert_eq!(board.get_silhouette(), bitboard!(
+    ///     "0000000"
+    ///     "0000000"
+    ///     "0000001"
+    ///     "0000001"
+    ///     "0000101"
+    ///     "0000111"
+    ///     "0010111"
+    /// ));
     /// ```
     pub fn get_silhouette(&self) -> Bitboard {
         let mut tmp = self.0;
@@ -390,7 +445,31 @@ impl Position {
         }
     }
 
-    #[allow(dead_code)]
+    /// Flips the board horizontally
+    /// ```
+    /// use fourengine::bitboard::*;
+    /// use fourengine::*;
+    ///
+    /// let position = position!(
+    ///     "......."
+    ///     "......."
+    ///     "......."
+    ///     "....O.."
+    ///     "..X.XO."
+    ///     "..OXOXX"
+    /// );
+    ///
+    /// let flipped = position!(
+    ///     "......."
+    ///     "......."
+    ///     "......."
+    ///     "..O...."
+    ///     ".OX.X.."
+    ///     "XXOXO.."
+    /// );
+    /// assert_eq!(position.flip(), flipped);
+    /// ```
+
     pub fn flip(&self) -> Position {
         Position {
             current: self.current.flip(),
@@ -557,7 +636,7 @@ impl Position {
             let playable_area = playable_columns & empty;
 
             let even_enemy_threats = Bitboard(other).get_threat_cells() & EVEN_ROWS & playable_area;
-            let under_threats = Bitboard(even_enemy_threats).keep_lowest_or_gutter() - BOTTOM_ROW;
+            let under_threats = Bitboard(even_enemy_threats).keep_lowest_or_gutter().0 - BOTTOM_ROW;
 
             let immediate_cells = self.get_height_cells() & FULL_BOARD;
             immediate_cells | (playable_area & under_threats & ODD_ROWS)
@@ -783,35 +862,6 @@ mod tests {
         assert_eq!(position.get_height(4), 3);
         assert_eq!(position.get_height(5), 2);
         assert_eq!(position.get_height(6), 1);
-    }
-
-    #[test]
-    fn flip() {
-        let position = Position::from_variation("436675553").unwrap();
-        assert_eq!(
-            position,
-            position!(
-                 "......."
-                 "......."
-                 "......."
-                 "....O.."
-                 "..X.XO."
-                 "..OXOXX"
-            )
-        );
-
-        let flipped = position.flip();
-        assert_eq!(
-            flipped,
-            position!(
-                 "......."
-                 "......."
-                 "......."
-                 "..O...."
-                 ".OX.X.."
-                 "XXOXO.."
-            )
-        );
     }
 
     #[test]
