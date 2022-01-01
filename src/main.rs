@@ -276,7 +276,7 @@ fn main() {
         .arg(
             Arg::new("no-book")
                 .long("no-book")
-                .about("Disables opening book"),
+                .help("Disables opening book"),
         )
         .subcommand(
             App::new("format-book")
@@ -301,13 +301,13 @@ fn main() {
                 .arg(
                     Arg::new("ply")
                         .long("ply")
-                        .about("Solves and saves all positions that have the specified ply")
+                        .help("Solves and saves all positions that have the specified ply")
                         .default_value("8"),
                 )
                 .arg(
                     Arg::new("use-book")
                         .long("use-book")
-                        .about("Uses another book when solving positions. Useful if generating a lower-ply book when a higher-ply book already exists.")
+                        .help("Uses another book when solving positions. Useful if generating a lower-ply book when a higher-ply book already exists.")
                         .takes_value(true)
                 ),
         )
@@ -319,13 +319,13 @@ fn main() {
                 .arg(
                     Arg::new("hex")
                         .long("hex")
-                        .about("Interpret the variation as a hexadecimal 64-bit position code"),
+                        .help("Interpret the variation as a hexadecimal 64-bit position code"),
                 )
                 .arg(
                     Arg::new("technical")
                         .short('t')
                         .long("technical")
-                        .about("Include technical details"),
+                        .help("Include technical details"),
                 ),
         )
         .subcommand(
@@ -335,7 +335,7 @@ fn main() {
                 .arg(
                     Arg::new("hex")
                         .long("hex")
-                        .about("Interpret the variation as a hexadecimal 64-bit position code"),
+                        .help("Interpret the variation as a hexadecimal 64-bit position code"),
                 ),
         )
         .subcommand(
