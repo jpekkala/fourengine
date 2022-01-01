@@ -1,8 +1,8 @@
 [package]
 name = "fourengine"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Jukka Pekkala", "Johan Nordlund"]
-edition = "2018"
+edition = "2021"
 
 [features]
 default = ["clap"]
