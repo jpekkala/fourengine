@@ -19,7 +19,7 @@ self.console = {
     }
 };
 
-const wasmPromise = import('../pkg/fourengine_wasm.js').then(wasm => {
+const wasmPromise = import('../../../www/pkg').then(wasm => {
     console.log('Wasm loaded');
     return wasm;
 }).catch(error => {

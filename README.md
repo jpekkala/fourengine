@@ -31,20 +31,6 @@ with the flag --no-book:
 
 The _solve_ subcommand never uses a book even if one exists.
 
-## Webassembly
-
-The engine can be run in the browser by compiling it into Webassembly
-
-```shell
-cargo install wasm-pack
-# if the above command fails, check its error message because it should say what dependencies to install
-
-cd www
-wasm-pack build
-npm install
-npm start
-```
-
 ## Profiling
 
 ### Setup in WSL2
@@ -68,4 +54,27 @@ git clone --depth=1 --branch=linux-msft-wsl-5.10.16.3 https://github.com/microso
 cargo build --release
 perf record target/release/fourengine
 perf report
+```
+
+## WebAssembly (JavaScript)
+
+```shell
+cargo install wasm-pack
+# if the above command fails, check its error message because it should say what dependencies to install
+````
+
+### NodeJS example
+
+```shell
+wasm-pack build www --target nodejs
+node examples/nodejs 444444
+```
+
+### Browser example
+
+```shell
+wasm-pack build www --target bundler
+cd examples/webpack
+npm install
+npm start
 ```
