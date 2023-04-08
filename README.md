@@ -66,14 +66,14 @@ cargo install wasm-pack
 ### NodeJS example
 
 ```shell
-wasm-pack build www --target nodejs
+wasm-pack build www --target nodejs --out-dir pkg/nodejs
 node examples/nodejs 444444
 ```
 
 ### Browser example
 
 ```shell
-wasm-pack build www --target bundler
+wasm-pack build www --target bundler --out-dir pkg/web
 cd examples/webpack
 npm install
 npm start

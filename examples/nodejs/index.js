@@ -1,5 +1,8 @@
 const process = require('process')
-const { Engine } = require('../../www/pkg')
+// From local build:
+const { Engine } = require('../../www/nodejs')
+// From npm:
+// const { Engine } = require('fourengine/nodejs')
 
 const variation = process.argv[2] || '444444'
 

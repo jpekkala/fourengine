@@ -1,5 +1,6 @@
 [package]
 name = "fourengine-wasm"
+description = "Connect-4 engine"
 version = "0.1.0"
 authors = ["Jukka Pekkala", "Johan Nordlund"]
 edition = "2018"

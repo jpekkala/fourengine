@@ -1,0 +1,14 @@
+{
+  "name": "fourengine",
+  "version": "1.0.5",
+  "main": "js/index.js",
+  "scripts": {
+    "build": "wasm-pack build"
+  },
+  "files": [
+    "package.json",
+    "bundler/*",
+    "nodejs/*",
+    "web/*"
+  ]
+}

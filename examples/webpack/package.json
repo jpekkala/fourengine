@@ -1,6 +1,6 @@
 {
-  "name": "fourengine",
-  "version": "1.0.4",
+  "name": "fourengine-demo",
+  "version": "0.1.0",
   "main": "js/index.js",
   "scripts": {
     "build": "webpack",

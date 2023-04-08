@@ -19,7 +19,7 @@ self.console = {
     }
 };
 
-const wasmPromise = import('../../../www/pkg').then(wasm => {
+const wasmPromise = import('../../../www/bundler').then(wasm => {
     console.log('Wasm loaded');
     return wasm;
 }).catch(error => {

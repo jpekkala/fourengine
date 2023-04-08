@@ -1,6 +1,10 @@
 node_modules
-dist
-pkg
 target
 Cargo.lock
 package-lock.json
+
+# Folders create by wasm-pack and the build script
+pkg
+bundler
+nodejs
+web

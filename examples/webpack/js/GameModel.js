@@ -1,5 +1,5 @@
 // TODO: This is fetched twice because the web worker also needs it. Figure out how to share it with web worker
-import * as wasm from '../../../www/pkg/fourengine_wasm.js';
+import * as wasm from '../../../www/bundler/fourengine_wasm.js';
 
 const BOARD_WIDTH = 7;
 const BOARD_HEIGHT = 6;
