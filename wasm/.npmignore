@@ -1,0 +1,8 @@
+pkg
+target
+Cargo.lock
+Cargo.toml
+*.tgz
+*.rs
+*.sh
+.gitignore

@@ -2,8 +2,10 @@ node_modules
 target
 Cargo.lock
 package-lock.json
+*.tgz
 
 # Folders create by wasm-pack and the build script
+books
 pkg
 bundler
 nodejs

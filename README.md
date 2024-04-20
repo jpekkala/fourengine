@@ -61,19 +61,19 @@ perf report
 ```shell
 cargo install wasm-pack
 # if the above command fails, check its error message because it should say what dependencies to install
+cd wasm
+./build-for-release.sh
 ````
 
 ### NodeJS example
 
 ```shell
-wasm-pack build www --target nodejs --out-dir pkg/nodejs
 node examples/nodejs 444444
 ```
 
 ### Browser example
 
 ```shell
-wasm-pack build www --target bundler --out-dir pkg/web
 cd examples/webpack
 npm install
 npm start

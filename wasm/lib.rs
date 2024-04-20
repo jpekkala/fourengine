@@ -103,7 +103,7 @@ impl JsEngine {
 
     #[wasm_bindgen]
     pub fn solve(&mut self, variation: &str) -> Solution {
-        let mut engine = &mut self.engine;
+        let engine = &mut self.engine;
         let position = Position::from_variation(variation).unwrap();
         engine.set_position(position);
         engine.work_count = 0;

@@ -64,8 +64,8 @@ impl Engine {
     pub fn new() -> Engine {
         Engine {
             position: Position::empty(),
-            /// Bigger is not necessarily better because it can lead to more cache misses. The
-            /// transposition table is a bottleneck and can easily take half of the execution time.
+            // Bigger is not necessarily better because it can lead to more cache misses. The
+            // transposition table is a bottleneck and can easily take half of the execution time.
             trans_table: TransTable::new(101501),
             work_count: 0,
             heuristic: FixedHeuristic {},

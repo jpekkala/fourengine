@@ -1,12 +1,13 @@
 const process = require('process')
 // From local build:
-const { Engine } = require('../../www/nodejs')
+const { Fourengine, Position } = require('../../wasm')
 // From npm:
-// const { Engine } = require('fourengine/nodejs')
+// const { Fourengine, Position } = require('fourengine')
 
-const variation = process.argv[2] || '444444'
+const position = new Position(process.argv[2] || '444444')
+console.log('Solving position:')
+console.log(position.toString())
 
-const engine = new Engine()
-console.log('Solving variation', variation)
-const solution = engine.solve(variation)
-console.log('Score is', solution.getScore())
+const fourengine = new Fourengine()
+const solution = fourengine.solve(position)
+console.log('Score is', solution.score)
