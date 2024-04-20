@@ -1,13 +1,14 @@
 const fs = require('node:fs')
 const fsPromises = require('node:fs/promises')
+const path = require('path')
 const wasm = require('./nodejs')
 
 const BOARD_WIDTH = 7
 const BOARD_HEIGHT = 6
 
 const BOOK_FILES = [
-    './books/7x6-ply4.txt',
-    './books/7x6-ply8.txt'
+    path.resolve(__dirname, 'books/7x6-ply4.txt'),
+    path.resolve(__dirname, './books/7x6-ply8.txt')
 ]
 
 async function loadBook() {
