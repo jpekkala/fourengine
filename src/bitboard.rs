@@ -6,6 +6,7 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::fmt::Formatter;
 use std::mem;
+use crate::move_bitmap::MoveBitmap;
 
 /// board dimensions
 pub const BOARD_WIDTH: u32 = 7;
@@ -31,10 +32,6 @@ pub struct Position {
     pub other: Bitboard,
 }
 
-/// Available moves as a bitmap where each column can have max 1 bit set.
-#[derive(Copy, Clone)]
-pub struct MoveBitmap(pub BoardInteger);
-
 pub enum Disc {
     White,
     Red,
@@ -44,18 +41,18 @@ pub enum Disc {
 // the column height including the gutter cell
 pub const BIT_HEIGHT: u32 = BOARD_HEIGHT + 1;
 
-const ALL_BITS: BoardInteger = (1 << (BIT_HEIGHT * BOARD_WIDTH)) - 1;
+pub const ALL_BITS: BoardInteger = (1 << (BIT_HEIGHT * BOARD_WIDTH)) - 1;
 pub const FIRST_COLUMN: BoardInteger = (1 << BIT_HEIGHT) - 1;
-const BOTTOM_ROW: BoardInteger = ALL_BITS / FIRST_COLUMN;
-const GUTTER_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
-const FULL_BOARD: BoardInteger = ALL_BITS ^ GUTTER_ROW;
-const LEFT_HALF: BoardInteger = FIRST_COLUMN
+pub const BOTTOM_ROW: BoardInteger = ALL_BITS / FIRST_COLUMN;
+pub const GUTTER_ROW: BoardInteger = BOTTOM_ROW << BOARD_HEIGHT;
+pub const FULL_BOARD: BoardInteger = ALL_BITS ^ GUTTER_ROW;
+pub const LEFT_HALF: BoardInteger = FIRST_COLUMN
     | (FIRST_COLUMN << BIT_HEIGHT)
     | (FIRST_COLUMN << 2 * BIT_HEIGHT)
     | (FIRST_COLUMN << 3 * BIT_HEIGHT);
 
-const ODD_ROWS: BoardInteger = BOTTOM_ROW * 0b010101;
-const EVEN_ROWS: BoardInteger = BOTTOM_ROW * 0b101010;
+pub const ODD_ROWS: BoardInteger = BOTTOM_ROW * 0b010101;
+pub const EVEN_ROWS: BoardInteger = BOTTOM_ROW * 0b101010;
 
 impl Bitboard {
     pub fn empty() -> Bitboard {
@@ -666,51 +663,6 @@ impl Ord for Position {
 impl PartialOrd for Position {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
-    }
-}
-
-impl MoveBitmap {
-    pub fn count_moves(&self) -> u32 {
-        self.0.count_ones()
-    }
-
-    pub fn get_left_half(&self) -> MoveBitmap {
-        MoveBitmap(self.0 & LEFT_HALF)
-    }
-
-    #[inline]
-    pub fn has_move(&self, column: u32) -> bool {
-        let column_bits = (self.0 >> (column * BIT_HEIGHT)) & FIRST_COLUMN;
-        column_bits != 0
-    }
-
-    /// Initializes the moves represented by this bitmap into an array with a compile-time size.
-    /// Creating move arrays is one of the performance bottlenecks which means that something like
-    /// a Vec is not an option. It is better to allocate an array on the stack and pass its
-    /// reference to this function.
-    ///
-    /// The return value is a slice of the given array where each item corresponds to a valid move.
-    #[inline(always)]
-    pub fn init_array<'a, T, F>(
-        &self,
-        move_array: &'a mut [T; BOARD_WIDTH as usize],
-        f: F,
-    ) -> &'a mut [T]
-    where
-        F: Fn(u32) -> T,
-    {
-        let mut move_count = 0;
-        for x in 0..BOARD_WIDTH {
-            if self.has_move(x) {
-                move_array[move_count] = f(x);
-                move_count += 1;
-            }
-        }
-        &mut move_array[0..move_count]
-    }
-
-    pub fn as_bitboard(&self) -> Bitboard {
-        Bitboard(self.0)
     }
 }
 

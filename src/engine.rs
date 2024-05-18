@@ -1,8 +1,9 @@
 #![allow(clippy::comparison_chain)]
 
-use crate::bitboard::{Bitboard, MoveBitmap, Position, BOARD_HEIGHT, BOARD_WIDTH};
+use crate::bitboard::{Bitboard, Position, BOARD_HEIGHT, BOARD_WIDTH};
 use crate::book::Book;
 use crate::heuristic::{FixedHeuristic, Heuristic};
+use crate::move_bitmap::MoveBitmap;
 use crate::score::Score;
 use crate::trans_table::TransTable;
 
