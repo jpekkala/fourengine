@@ -1,6 +1,6 @@
 use clap::{crate_version, App, Arg, ArgMatches};
 use fourengine::benchmark::Benchmark;
-use fourengine::bitboard::{Bitboard, Position};
+use fourengine::bitboard::{Bitboard};
 use fourengine::book::{
     generate_book, get_path_for_ply, verify_book, Book, BookFormat, BookWriter, DEFAULT_BOOK_PLY,
 };
@@ -12,6 +12,7 @@ use std::fs::File;
 use std::io;
 use std::io::{BufRead, BufReader, LineWriter, Write};
 use std::path::Path;
+use fourengine::position::Position;
 
 /// User input representing a position. The purpose of this is to be able to report errors using
 /// the same string that the user gave. Using Position directly would lose that information.

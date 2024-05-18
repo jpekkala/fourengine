@@ -146,7 +146,8 @@ fn closest_power_of_two(number: BoardInteger) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bitboard::{BoardInteger, Position};
+    use crate::bitboard::{BoardInteger};
+    use crate::position::Position;
 
     #[test]
     fn validate_masks() {

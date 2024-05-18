@@ -1,5 +1,5 @@
 use crate::benchmark::{format_large_number, Benchmark};
-use crate::bitboard::{Bitboard, BoardInteger, Position, BOARD_HEIGHT, BOARD_WIDTH};
+use crate::bitboard::{Bitboard, BoardInteger, BOARD_HEIGHT, BOARD_WIDTH};
 use crate::engine::Engine;
 use crate::score::{Score, SCORE_BITS};
 use core::mem;
@@ -9,6 +9,7 @@ use std::fs::{create_dir_all, File};
 use std::io::{BufRead, BufReader, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::{cmp, io};
+use crate::position::Position;
 
 pub const DEFAULT_BOOK_PLY: u32 = 8;
 pub const BOOK_FOLDER: &str = "books";
