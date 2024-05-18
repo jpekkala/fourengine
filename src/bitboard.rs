@@ -703,14 +703,14 @@ impl fmt::Display for Position {
 #[macro_export]
 macro_rules! position {
     ($($x:literal)+) => {
-        Position::from_string(concat!($($x,"\n",)+)).expect("Invalid position representation");
+        Position::from_string(concat!($($x,"\n",)+)).expect("Invalid position representation")
     };
 }
 
 #[macro_export]
 macro_rules! bitboard {
     ($($x:literal)+) => {
-        Bitboard::from_string(concat!($($x,"\n",)+)).expect("Invalid bitboard representation");
+        Bitboard::from_string(concat!($($x,"\n",)+)).expect("Invalid bitboard representation")
     };
 }
 
