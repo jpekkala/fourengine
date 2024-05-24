@@ -1,6 +1,7 @@
-use fourengine::bitboard::{Bitboard, Disc, Position};
+use fourengine::bitboard::Bitboard;
 use fourengine::book::Book;
 use fourengine::engine::Engine;
+use fourengine::position::{Disc, Position};
 use fourengine::score::Score;
 use wasm_bindgen::prelude::*;
 
@@ -16,6 +17,16 @@ impl JsPosition {
         JsPosition {
             position: Position::from_variation(variation).unwrap(),
         }
+    }
+
+    #[wasm_bindgen(js_name = fromHexString)]
+    pub fn from_hex_string(hex: &str) -> Option<JsPosition> {
+        Position::from_hex_string(hex).map(|position| JsPosition { position })
+    }
+
+    #[wasm_bindgen(js_name = toHexString)]
+    pub fn to_hex_string(&self) -> String {
+        self.position.as_hex_string()
     }
 
     #[wasm_bindgen(js_name = getCell)]
@@ -58,6 +69,11 @@ impl JsPosition {
     #[wasm_bindgen(js_name = getHeight)]
     pub fn get_height(&self, x: u32) -> u32 {
         self.position.get_height(x)
+    }
+
+    #[wasm_bindgen(js_name = guessVariation)]
+    pub fn guess_variation(&self) -> Option<String> {
+        self.position.guess_variation()
     }
 }
 
