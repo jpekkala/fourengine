@@ -6,10 +6,11 @@ use core::mem;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashSet};
 use std::fs::{create_dir_all, File};
-use std::io::{BufRead, BufReader, ErrorKind, Read, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader, Error, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::{cmp, io};
 use crate::position::Position;
+use std::convert::TryInto;
 
 pub const DEFAULT_BOOK_PLY: u32 = 8;
 pub const BOOK_FOLDER: &str = "books";
@@ -123,6 +124,30 @@ impl BookEntry {
         }
         Some(BookEntry(board))
     }
+
+    /// Two u64s are saved. The first u64 is always for the first player (i.e. so not necessarily
+    /// the current player). Both bitboards have been shifted left by 2 to make room for a score.
+    pub fn from_vianiato_bytes(bytes: &[u8; 16]) -> BookEntry {
+        let first_bytes: [u8; 8] = bytes[0..8].try_into().unwrap();
+        let second_bytes: [u8; 8] = bytes[8..16].try_into().unwrap();
+
+        let first_board = Bitboard(u64::from_ne_bytes(first_bytes) >> 2);
+        let second_board = Bitboard(u64::from_ne_bytes(second_bytes) >> 2);
+
+        let mut position = Position {
+            current: first_board,
+            other: second_board
+        };
+
+        if position.get_ply() % 2 != 0 {
+            position = Position {
+                current: second_board,
+                other: first_board,
+            }
+        }
+
+        BookEntry::new(&position, Score::Unknown)
+    }
 }
 
 impl Ord for BookEntry {
@@ -171,6 +196,7 @@ impl Book {
         self.sort_and_shrink()
     }
 
+    /// Reads an opening book by autodetecting its format
     pub fn open(file_path: &Path) -> Result<Book, std::io::Error> {
         let file = File::open(file_path)?;
         let mut buf = BufReader::new(file);
@@ -184,6 +210,17 @@ impl Book {
                     Err(err)
                 }
             }
+        }
+    }
+
+    pub fn open_with_format(file_path: &Path, book_format: BookFormat) -> Result<Book, std::io::Error> {
+        let file = File::open(file_path)?;
+        let mut buf = BufReader::new(file);
+
+        match book_format {
+            BookFormat::Binary => Self::read_binary_book(&mut buf),
+            BookFormat::Hex => Self::read_text_book(&mut buf),
+            BookFormat::Vianiato => Self::read_vianiato_book(&mut buf)
         }
     }
 
@@ -233,6 +270,25 @@ impl Book {
                     let entry = BookEntry::from_bytes(&buffer).ok_or_else(|| {
                         std::io::Error::new(ErrorKind::InvalidData, "Invalid position")
                     })?;
+                    book.add_entry(entry);
+                }
+                Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
+                Err(e) => return Err(e),
+            }
+        }
+
+        book.sort_and_shrink();
+        Ok(book)
+    }
+
+    fn read_vianiato_book<R: Read>(reader: &mut BufReader<R>) -> Result<Book, std::io::Error> {
+        let mut book = Book::empty();
+        let mut buffer = [0; 16];
+
+        loop {
+            match reader.read_exact(&mut buffer) {
+                Ok(_) => {
+                    let entry = BookEntry::from_vianiato_bytes(&buffer);
                     book.add_entry(entry);
                 }
                 Err(e) if e.kind() == io::ErrorKind::UnexpectedEof => break,
@@ -297,6 +353,7 @@ impl Book {
 pub enum BookFormat {
     Hex,
     Binary,
+    Vianiato
 }
 
 pub struct BookWriter<W: Write> {
@@ -317,6 +374,7 @@ impl<W: Write> BookWriter<W> {
                 self.writer.write_all(b"\n")
             }
             BookFormat::Binary => self.writer.write_all(&entry.to_bytes()),
+            BookFormat::Vianiato => Err(Error::new(ErrorKind::Other, "Not implemented"))
         }
     }
 }
