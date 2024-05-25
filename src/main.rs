@@ -1,4 +1,4 @@
-use clap::{crate_version, App, Arg, ArgMatches};
+use clap::{crate_version, Arg, ArgMatches, Command, ArgAction};
 use fourengine::benchmark::Benchmark;
 use fourengine::bitboard::{Bitboard};
 use fourengine::book::{
@@ -47,7 +47,7 @@ impl fmt::Display for PositionInput {
     }
 }
 
-fn run_test_files<'a>(filenames: &mut impl Iterator<Item = &'a str>) -> Result<(), String> {
+fn run_test_files(filenames: &[String]) -> Result<(), String> {
     let mut total_benchmark = Benchmark::empty();
     for filename in filenames {
         let benchmark = verify_and_benchmark_file(filename)?;
@@ -97,17 +97,18 @@ fn parse_line_with_score(line: String) -> Option<(PositionInput, Score)> {
 }
 
 pub fn format_book(matches: &ArgMatches) -> Result<(), std::io::Error> {
-    let book_file = Path::new(matches.value_of("book-file").unwrap());
+    matches.get_one::<String>("book_file").map(|s| s.as_str());
+    let book_file = get_path_arg(&matches, "book-file").unwrap();
     let book = Book::open(book_file)?;
 
-    let book_format = match matches.value_of("format").unwrap() {
+    let book_format = match get_string_arg(&matches, "format").unwrap() {
         "binary" => BookFormat::Binary,
         "hex" => BookFormat::Hex,
         &_ => panic!("Invalid format"),
     };
 
-    let omit_won = matches.is_present("omit-won");
-    let omit_forced = matches.is_present("omit-forced");
+    let omit_won = matches.get_flag("omit-won");
+    let omit_forced = matches.get_flag("omit-forced");
     let filtered_entries = book.iter().filter(|entry| {
         let position = entry.get_position();
 
@@ -126,15 +127,14 @@ pub fn format_book(matches: &ArgMatches) -> Result<(), std::io::Error> {
         true
     });
 
-    if matches.is_present("count-only") {
+    if matches.get_flag("count-only") {
         println!("{}", filtered_entries.count());
         return Ok(());
     }
 
-    let writer: Box<dyn Write> = match matches.value_of("out") {
+    let writer: Box<dyn Write> = match get_path_arg(&matches, "out") {
         None => Box::new(io::stdout()),
         Some(path) => {
-            let path = Path::new(path);
             let writer = LineWriter::new(File::create(path)?);
             Box::new(writer)
         }
@@ -149,7 +149,7 @@ pub fn format_book(matches: &ArgMatches) -> Result<(), std::io::Error> {
 }
 
 fn play(matches: &ArgMatches) -> Result<(), String> {
-    let use_book = !matches.is_present("no-book");
+    let use_book = !matches.get_flag("no-book");
     if use_book {
         let path_buf = get_path_for_ply(DEFAULT_BOOK_PLY);
         let book_exists = path_buf.as_path().exists();
@@ -175,8 +175,8 @@ fn play(matches: &ArgMatches) -> Result<(), String> {
 }
 
 fn print_subcommand(matches: &ArgMatches) -> Result<(), String> {
-    let variation = matches.value_of("variation").unwrap_or("");
-    let position = if matches.is_present("hex") {
+    let variation = get_string_arg(&matches, "variation").unwrap_or("");
+    let position = if matches.get_flag("hex") {
         PositionInput::Hex(String::from(variation))
     } else {
         PositionInput::Variation(String::from(variation))
@@ -185,7 +185,7 @@ fn print_subcommand(matches: &ArgMatches) -> Result<(), String> {
 
     print_board(position);
 
-    if matches.is_present("technical") {
+    if matches.get_flag("technical") {
         println!();
         println!("Hex code: {}", position.as_hex_string());
         let (normalized_code, symmetric) = position.to_normalized_position_code();
@@ -269,36 +269,45 @@ fn solve(pos_input: PositionInput, use_book: bool) -> Result<(), String> {
     Ok(())
 }
 
+fn get_string_arg<'a>(matches: &'a ArgMatches, name: &str) -> Option<&'a str> {
+    matches.get_one::<String>(name)
+        .map(|s| s.as_str())
+}
+
+fn get_path_arg<'a>(matches: &'a ArgMatches, name: &str) -> Option<&'a Path> {
+    get_string_arg(matches, name).map(|s| Path::new(s))
+}
+
 fn main() {
-    let matches = App::new("Fourengine")
+    let matches = Command::new("Fourengine")
         .version(crate_version!())
         .about("Connect-4 engine")
         .author("Jukka Pekkala, Johan Nordlund")
         .arg(
             Arg::new("no-book")
                 .long("no-book")
-                .help("Disables opening book"),
+                .help("Disables opening book")
+                .action(ArgAction::SetTrue),
         )
         .subcommand(
-            App::new("format-book")
+            Command::new("format-book")
                 .about("Converts a book to another format")
                 .arg(Arg::new("book-file").required(true).index(1))
-                .arg(Arg::new("out").long("out").takes_value(true))
+                .arg(Arg::new("out").long("out").value_name("FILE").num_args(1))
                 .arg(Arg::new("count-only").long("count-only"))
                 .arg(
                     Arg::new("format")
                         .long("format")
-                        .possible_value("hex")
-                        .possible_value("binary")
+                        .value_parser(["hex", "binary"])
                         .default_value("hex"),
                 )
-                .arg(Arg::new("omit-forced").long("omit-forced"))
-                .arg(Arg::new("omit-won").long("omit-won")),
+                .arg(Arg::new("omit-forced").long("omit-forced").action(ArgAction::SetTrue))
+                .arg(Arg::new("omit-won").long("omit-won").action(ArgAction::SetTrue)),
         )
         .subcommand(
-            App::new("generate-book")
+            Command::new("generate-book")
                 .about("Generates and saves an opening book")
-                .arg(Arg::new("out").long("out").takes_value(true))
+                .arg(Arg::new("out").long("out").value_name("FILE").num_args(1))
                 .arg(
                     Arg::new("ply")
                         .long("ply")
@@ -309,48 +318,52 @@ fn main() {
                     Arg::new("use-book")
                         .long("use-book")
                         .help("Uses another book when solving positions. Useful if generating a lower-ply book when a higher-ply book already exists.")
-                        .takes_value(true)
+                        .value_name("FILE")
+                        .num_args(1)
                 ),
         )
         .subcommand(
-            App::new("print")
+            Command::new("print")
                 .about("Prints a position as ASCII text")
                 .alias("draw")
                 .arg(Arg::new("variation").required(false).index(1))
                 .arg(
                     Arg::new("hex")
                         .long("hex")
-                        .help("Interpret the variation as a hexadecimal 64-bit position code"),
+                        .help("Interpret the variation as a hexadecimal 64-bit position code")
+                        .action(ArgAction::SetTrue),
                 )
                 .arg(
                     Arg::new("technical")
                         .short('t')
                         .long("technical")
-                        .help("Include technical details"),
+                        .help("Include technical details")
+                        .action(ArgAction::SetTrue),
                 ),
         )
         .subcommand(
-            App::new("solve")
+            Command::new("solve")
                 .about("Solves a position")
                 .arg(Arg::new("variation").required(false).index(1))
                 .arg(
                     Arg::new("hex")
                         .long("hex")
-                        .help("Interpret the variation as a hexadecimal 64-bit position code"),
+                        .help("Interpret the variation as a hexadecimal 64-bit position code")
+                        .action(ArgAction::SetTrue),
                 ),
         )
         .subcommand(
-            App::new("test")
+            Command::new("test")
                 .about("Runs a test set from a file (or several files)")
                 .arg(
                     Arg::new("files")
                         .required(true)
                         .index(1)
-                        .multiple_values(true),
+                        .num_args(1..)
                 ),
         )
         .subcommand(
-            App::new("verify-book")
+            Command::new("verify-book")
                 .about("Compares and verifies a book against a reference book")
                 .arg(Arg::new("book").index(1).required(true))
                 .arg(Arg::new("reference_book").index(2).required(true)),
@@ -362,14 +375,14 @@ fn main() {
             format_book(sub_matches).map_err(|err| err.to_string())
         }
         Some(("generate-book", sub_matches)) => {
-            let ply = sub_matches.value_of("ply").unwrap().parse().unwrap();
-            let use_book = sub_matches.value_of("use-book").map(|str| Path::new(str));
+            let ply = get_string_arg(&sub_matches, "ply").unwrap().parse().unwrap();
+            let use_book = get_path_arg(&sub_matches, "use-book");
             generate_book(ply, use_book).map_err(|err| err.to_string())
         }
         Some(("print", sub_matches)) => print_subcommand(sub_matches),
         Some(("solve", sub_matches)) => {
-            let variation = sub_matches.value_of("variation").unwrap_or("");
-            let pos_input = if sub_matches.is_present("hex") {
+            let variation = get_string_arg(&sub_matches, "variation").unwrap_or("");
+            let pos_input = if sub_matches.get_flag("hex") {
                 PositionInput::Hex(String::from(variation))
             } else {
                 PositionInput::Variation(String::from(variation))
@@ -377,12 +390,15 @@ fn main() {
             solve(pos_input, false)
         }
         Some(("test", sub_matches)) => {
-            let mut files = sub_matches.values_of("files").unwrap();
-            run_test_files(&mut files)
+            let files: Vec<String> = sub_matches.get_many::<String>("files")
+                .expect("Files expected")
+                .cloned()
+                .collect();
+            run_test_files(&files)
         }
         Some(("verify-book", sub_matches)) => {
-            let book = Path::new(sub_matches.value_of("book").unwrap());
-            let reference_book = Path::new(sub_matches.value_of("reference_book").unwrap());
+            let book = get_path_arg(&sub_matches, "book").unwrap();
+            let reference_book = get_path_arg(&sub_matches, "reference_book").unwrap();
             verify_book(book, reference_book).map_err(|err| err.to_string())
         }
         _ => play(&matches),
