@@ -97,14 +97,20 @@ fn parse_line_with_score(line: String) -> Option<(PositionInput, Score)> {
 }
 
 pub fn format_book(matches: &ArgMatches) -> Result<(), std::io::Error> {
-    matches.get_one::<String>("book_file").map(|s| s.as_str());
-    let book_file = get_path_arg(&matches, "book-file").unwrap();
-    let book = Book::open(book_file)?;
+    let book_file = get_path_arg(&matches, "in").unwrap();
+    let book = match get_string_arg(&matches, "in-format").unwrap() {
+      "detect" => Book::open(book_file),
+      "binary" => Book::open_with_format(book_file, BookFormat::Binary),
+      "hex" => Book::open_with_format(book_file, BookFormat::Hex),
+      "vianiato" => Book::open_with_format(book_file, BookFormat::Vianiato),
+      &_ => panic!("Invalid in-format"),
+    }?;
 
-    let book_format = match get_string_arg(&matches, "format").unwrap() {
+    let book_format = match get_string_arg(&matches, "out-format").unwrap() {
         "binary" => BookFormat::Binary,
         "hex" => BookFormat::Hex,
-        &_ => panic!("Invalid format"),
+        "vianiato" => BookFormat::Vianiato,
+        &_ => panic!("Invalid out-format"),
     };
 
     let omit_won = matches.get_flag("omit-won");
@@ -292,13 +298,19 @@ fn main() {
         .subcommand(
             Command::new("format-book")
                 .about("Converts a book to another format")
-                .arg(Arg::new("book-file").required(true).index(1))
-                .arg(Arg::new("out").long("out").value_name("FILE").num_args(1))
-                .arg(Arg::new("count-only").long("count-only"))
+                .arg(Arg::new("in").required(true).long("in").value_name("INPUT_FILE").num_args(1))
+                .arg(Arg::new("out").required(true).long("out").value_name("OUTPUT_FILE").num_args(1))
+                .arg(Arg::new("count-only").long("count-only").action(ArgAction::SetTrue))
                 .arg(
-                    Arg::new("format")
-                        .long("format")
-                        .value_parser(["hex", "binary"])
+                    Arg::new("in-format")
+                        .long("in-format")
+                        .value_parser(["detect", "hex", "binary", "vianiato"])
+                        .default_value("detect"),
+                )
+                .arg(
+                    Arg::new("out-format")
+                        .long("out-format")
+                        .value_parser(["hex", "binary", "vianiato"])
                         .default_value("hex"),
                 )
                 .arg(Arg::new("omit-forced").long("omit-forced").action(ArgAction::SetTrue))

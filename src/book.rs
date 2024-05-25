@@ -6,7 +6,7 @@ use core::mem;
 use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashSet};
 use std::fs::{create_dir_all, File};
-use std::io::{BufRead, BufReader, Error, ErrorKind, Read, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::{cmp, io};
 use crate::position::Position;
@@ -40,7 +40,9 @@ impl BookEntry {
     }
 
     pub fn get_position(&self) -> Position {
-        Position::from_position_code(self.get_position_code()).unwrap()
+        let code = self.get_position_code();
+        Position::from_position_code(code)
+            .expect(&format!("Invalid position code in book: {:0>16X}", code))
     }
 
     pub fn get_position_code(&self) -> BoardInteger {
@@ -131,8 +133,8 @@ impl BookEntry {
         let first_bytes: [u8; 8] = bytes[0..8].try_into().unwrap();
         let second_bytes: [u8; 8] = bytes[8..16].try_into().unwrap();
 
-        let first_board = Bitboard(u64::from_ne_bytes(first_bytes) >> 2);
-        let second_board = Bitboard(u64::from_ne_bytes(second_bytes) >> 2);
+        let first_board = Bitboard(u64::from_be_bytes(first_bytes) >> 2);
+        let second_board = Bitboard(u64::from_be_bytes(second_bytes) >> 2);
 
         let mut position = Position {
             current: first_board,
@@ -147,6 +149,23 @@ impl BookEntry {
         }
 
         BookEntry::new(&position, Score::Unknown)
+    }
+
+    pub fn to_vianiato_bytes(&self) -> [u8; 16] {
+        let position = self.get_position();
+        let (first, second) = if position.get_ply() % 2 == 0 {
+            (position.current, position.other)
+        } else {
+            (position.other, position.current)
+        };
+
+        let first_bytes = (first.0 << 2).to_be_bytes();
+        let second_bytes = (second.0 << 2).to_be_bytes();
+
+        let mut result = [0u8; 16];
+        result[0..8].copy_from_slice(&first_bytes);
+        result[8..16].copy_from_slice(&second_bytes);
+        result
     }
 }
 
@@ -250,7 +269,7 @@ impl Book {
                 } else {
                     let err = std::io::Error::new(
                         ErrorKind::InvalidData,
-                        format!("Invalid position: {}", line),
+                        format!("Invalid position when reading opening book: {}", line),
                     );
                     return Err(err);
                 }
@@ -374,7 +393,7 @@ impl<W: Write> BookWriter<W> {
                 self.writer.write_all(b"\n")
             }
             BookFormat::Binary => self.writer.write_all(&entry.to_bytes()),
-            BookFormat::Vianiato => Err(Error::new(ErrorKind::Other, "Not implemented"))
+            BookFormat::Vianiato => self.writer.write_all(&entry.to_vianiato_bytes())
         }
     }
 }
