@@ -72,11 +72,7 @@ impl BookEntry {
         let position = Position::from_position_code(position_code)?;
 
         let score = Score::from_string(&line[HEX_LENGTH..]);
-        if score == Score::Unknown {
-            None
-        } else {
-            Some(BookEntry::new(&position, score))
-        }
+        Some(BookEntry::new(&position, score))
     }
 
     fn from_verbose_string(line: &str) -> Option<BookEntry> {
