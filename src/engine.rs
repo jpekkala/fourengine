@@ -198,6 +198,9 @@ impl Engine {
             return score;
         }
 
+        let mut ab = ab;
+        let mut best_score = Score::Loss;
+
         let (position_code, symmetric) = self.position.to_normalized_position_code();
         if symmetric {
             move_bitmap = move_bitmap.get_left_half();
@@ -212,6 +215,21 @@ impl Engine {
                         return our_score;
                     }
                 }
+
+                let new_position_code = new_position.to_normalized_position_code().0;
+                let opponent_trans_score = self.trans_table.fetch(new_position_code);
+                if opponent_trans_score == Score::Loss {
+                    return Score::Win;
+                } else if opponent_trans_score == Score::Draw {
+                    best_score = Score::Draw;
+                    ab.alpha = Score::Draw;
+                    if ab.has_cutoff() {
+                        return Score::Draw
+                    }
+                    move_bitmap = move_bitmap.unset_move(x);
+                } else if opponent_trans_score == Score::Win {
+                    move_bitmap = move_bitmap.unset_move(x);
+                }
             }
         }
 
@@ -223,9 +241,6 @@ impl Engine {
                 }
             }
         }
-
-        let mut ab = ab;
-        let mut best_score = Score::Loss;
 
         let trans_score = self.trans_table.fetch(position_code);
         if trans_score.is_exact() {

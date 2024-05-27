@@ -19,6 +19,12 @@ impl MoveBitmap {
         column_bits != 0
     }
 
+    #[inline]
+    pub fn unset_move(&self, column: u32) -> MoveBitmap {
+        let mask = !(FIRST_COLUMN << (column * BIT_HEIGHT));
+        return MoveBitmap(self.0 & mask);
+    }
+
     /// Initializes the moves represented by this bitmap into an array with a compile-time size.
     /// Creating move arrays is one of the performance bottlenecks which means that something like
     /// a Vec is not an option. It is better to allocate an array on the stack and pass its
