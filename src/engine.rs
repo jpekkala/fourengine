@@ -306,10 +306,17 @@ impl Engine {
         let y = self.position.get_height(x);
 
         let threats = new_position.to_other_perspective().count_threats() as i32;
-        let mut priority: i32 = threats * 1000000;
+        let mut priority: i32 = threats * 100000;
+
         if self.ply > 19 {
             priority += 1000 * y as i32;
         }
+
+        let trans_table_score = self.trans_table.fetch(new_position.to_position_code());
+        if trans_table_score != Score::Unknown {
+            priority += trans_table_score as i32 * 1000000;
+        }
+
         priority += self.heuristic.get_value(x, y);
 
         Move {

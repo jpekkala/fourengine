@@ -58,13 +58,22 @@ impl Default for HistoryHeuristic {
 pub struct FixedHeuristic;
 
 // https://www.scirp.org/html/1-9601415_90972.htm
+// const TABLE: [[i32; BOARD_WIDTH as usize]; BOARD_HEIGHT as usize] = [
+//     [3, 4, 5, 7, 5, 4, 3],
+//     [4, 6, 8, 10, 8, 6, 4],
+//     [5, 8, 11, 13, 11, 8, 5],
+//     [5, 8, 11, 13, 11, 8, 5],
+//     [4, 6, 8, 10, 8, 6, 4],
+//     [3, 4, 5, 7, 5, 4, 3],
+// ];
+
 const TABLE: [[i32; BOARD_WIDTH as usize]; BOARD_HEIGHT as usize] = [
-    [3, 4, 5, 7, 5, 4, 3],
-    [4, 6, 8, 10, 8, 6, 4],
-    [5, 8, 11, 13, 11, 8, 5],
-    [5, 8, 11, 13, 11, 8, 5],
-    [4, 6, 8, 10, 8, 6, 4],
-    [3, 4, 5, 7, 5, 4, 3],
+    [3, 5, 7, 11, 7, 5, 3],
+    [4, 6, 10, 12, 10, 6, 4],
+    [5, 10, 11, 12, 11, 10, 5],
+    [4, 8, 10, 11, 10, 8, 4],
+    [3, 6, 8, 10, 8, 6, 3],
+    [2, 3, 5, 7, 5, 3, 2],
 ];
 
 // impl FixedHeuristic {
