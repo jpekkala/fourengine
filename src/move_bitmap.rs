@@ -53,4 +53,163 @@ impl MoveBitmap {
     pub fn as_bitboard(&self) -> Bitboard {
         Bitboard(self.0)
     }
+
+    pub fn from_bitboard_string(s: &str) -> Option<MoveBitmap> {
+        let bitboard = Bitboard::from_string(s)?;
+        Some(MoveBitmap(bitboard.0))
+    }
+
+    pub fn to_bitboard_string(&self) -> String {
+        self.as_bitboard().to_string()
+    }
+}
+
+// Initialize MoveBitmap from a visual string representation
+#[macro_export]
+macro_rules! move_bitmap {
+    ($($x:literal)+) => {
+        MoveBitmap::from_bitboard_string(concat!($($x,"\n",)+)).expect("Invalid move bitmap representation")
+    };
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_unset_move() {
+        let bitmap = move_bitmap!(
+            "0000000"
+            "0001000"
+            "0000000"
+            "0001000"
+            "0000000"
+            "0001000"
+        );
+
+        let new_bitmap = bitmap.unset_move(3);
+        let expected = move_bitmap!(
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+        );
+
+        assert_eq!(new_bitmap.to_bitboard_string(), expected.to_bitboard_string());
+    }
+
+    #[test]
+    fn test_unset_move_on_full_bitmap() {
+        let bitmap = move_bitmap!(
+            "1111111"
+            "1111111"
+            "1111111"
+            "1111111"
+            "1111111"
+            "1111111"
+        );
+
+        // Unset the move in the first column (index 0)
+        let new_bitmap = bitmap.unset_move(0);
+        let expected = move_bitmap!(
+            "0111111"
+            "0111111"
+            "0111111"
+            "0111111"
+            "0111111"
+            "0111111"
+        );
+
+        assert_eq!(new_bitmap.to_bitboard_string(), expected.to_bitboard_string());
+
+        // Unset the move in the last column (index 6)
+        let new_bitmap = new_bitmap.unset_move(6);
+        let expected = move_bitmap!(
+            "0111110"
+            "0111110"
+            "0111110"
+            "0111110"
+            "0111110"
+            "0111110"
+        );
+
+        assert_eq!(new_bitmap.to_bitboard_string(), expected.to_bitboard_string());
+    }
+
+    #[test]
+    fn test_unset_move_on_empty_bitmap() {
+        let bitmap = move_bitmap!(
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+        );
+
+        let new_bitmap = bitmap.unset_move(0);
+        let expected = move_bitmap!(
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+        );
+
+        assert_eq!(new_bitmap.to_bitboard_string(), expected.to_bitboard_string());
+    }
+
+    #[test]
+    fn test_unset_move_in_all_columns() {
+        let bitmap = move_bitmap!(
+            "1111111"
+            "1111111"
+            "1111111"
+            "1111111"
+            "1111111"
+            "1111111"
+        );
+
+        // Unset moves in all columns
+        let mut new_bitmap = bitmap;
+        for i in 0..BOARD_WIDTH {
+            new_bitmap = new_bitmap.unset_move(i);
+        }
+        let expected = move_bitmap!(
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+            "0000000"
+        );
+
+        assert_eq!(new_bitmap.to_bitboard_string(), expected.to_bitboard_string());
+    }
+
+    #[test]
+    fn test_unset_move_does_not_affect_other_columns() {
+        let bitmap = move_bitmap!(
+            "1010101"
+            "1010101"
+            "1010101"
+            "1010101"
+            "1010101"
+            "1010101"
+        );
+
+        let new_bitmap = bitmap.unset_move(2);
+        let expected = move_bitmap!(
+            "1000101"
+            "1000101"
+            "1000101"
+            "1000101"
+            "1000101"
+            "1000101"
+        );
+        assert_eq!(new_bitmap.to_bitboard_string(), expected.to_bitboard_string());
+    }
 }
