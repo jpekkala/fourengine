@@ -104,7 +104,7 @@ impl Engine {
                 return Score::Win;
             }
         }
-        self.negamax(AlphaBeta::new(), 42)
+        self.negamax(AlphaBeta::new(), BOARD_WIDTH * BOARD_HEIGHT)
     }
 
     #[inline(always)]
